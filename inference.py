@@ -72,7 +72,7 @@ class EnvClient:
         self._client: Optional[httpx.AsyncClient] = None
 
     async def __aenter__(self):
-        self._client = httpx.AsyncClient(timeout=60.0)
+        self._client = httpx.AsyncClient(timeout=30.0)
         return self
 
     async def __aexit__(self, *_):
@@ -267,7 +267,7 @@ async def run_task(env: EnvClient, llm: OpenAI, task_id: str) -> Dict:
             score = float(grade_data.get("score", 0.0))
         except Exception as e:
             debug(f"Grade failed: {e}")
-            score = sum(rewards) / MAX_STEPS if MAX_STEPS > 0 else 0.0
+            score = sum(rewards) / len(rewards) if rewards else 0.0
 
         score = min(max(score, 0.0), 1.0)
         success = score >= SUCCESS_SCORE_THRESHOLD
@@ -294,15 +294,16 @@ async def main():
 
         results = []
         for task_info in task_list:
+            task_id = task_info if isinstance(task_info, str) else task_info["task_id"]
             try:
                 result = await asyncio.wait_for(
-                    run_task(env, llm, task_info["task_id"]),
+                    run_task(env, llm, task_id),
                     timeout=TASK_TIMEOUT_SECONDS
                 )
                 results.append(result)
             except asyncio.TimeoutError:
-                debug(f"Task {task_info['task_id']} timed out after {TASK_TIMEOUT_SECONDS}s")
-                results.append({"task_id": task_info["task_id"], "score": 0.0, "steps": MAX_STEPS})
+                debug(f"Task {task_id} timed out after {TASK_TIMEOUT_SECONDS}s")
+                results.append({"task_id": task_id, "score": 0.0, "steps": MAX_STEPS})
 
     avg_score = sum(r["score"] for r in results) / len(results) if results else 0.0
     with open("baseline_results.json", "w") as f:
