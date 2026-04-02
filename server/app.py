@@ -2,7 +2,7 @@
 FastAPI server implementing OpenEnv specification
 """
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Body
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Dict, Optional, List
@@ -148,9 +148,12 @@ async def get_task_info(task_id: str):
 
 
 @app.post("/reset", response_model=ResetResponse)
-async def reset(request: ResetRequest):
+async def reset(request: Optional[ResetRequest] = Body(default=None)):
     """Reset environment to initial state"""
     global current_env, current_task_id
+    
+    if request is None:
+        request = ResetRequest()
     
     # Get task
     task = get_task(request.task_id)
