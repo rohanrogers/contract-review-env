@@ -18,54 +18,53 @@ tags:
 
 # Contract Review Environment v2.0 🔍⚖️
 
-**Interactive legal contract review environment for AI agent training and evaluation**
+**Interactive legal contract review environment for AI agent training and evaluation.**  
+Designed specifically for evaluating LLM agents in structured decision-making tasks.
+
+---
 
 ## 🎯 Motivation
 
-Real-world contract review is a **strategic, multi-step reasoning task**, not a simple classification problem. Legal professionals:
+Real-world contract review is a **strategic, multi-step reasoning task** — not a simple classification problem. Legal professionals:
 
 1. **Explore progressively** — read clauses sequentially, not all at once
 2. **Flag risks accurately** — identify problematic terms (unlimited liability, auto-renewal, etc.)
-3. **Make strategic decisions** — balance risk vs. business value (accept/negotiate/reject)
+3. **Make strategic decisions** — balance risk vs. business value (accept / negotiate / reject)
 4. **Work under constraints** — time, budget, and cognitive load limitations
 
-This environment transforms contract review from a **static classification wrapper** into an **interactive decision-making system** that challenges AI agents to reason strategically over multiple steps.
+This environment transforms contract review from a static classification wrapper into an **interactive decision-making system** that challenges AI agents to reason strategically across multiple steps.
 
 ---
 
 ## 🚀 Key Features
 
-### 1. **Progressive Clause Revelation**
+### 1. Progressive Clause Revelation
 Agents don't see the entire contract upfront. They must:
-- Request clauses one at a time (`REQUEST_NEXT`)
+- Request clauses one at a time (`request_next_clause`)
 - Decide when they've seen enough
 - Balance exploration vs. exploitation
 
-### 2. **Multi-Action Decision System**
+### 2. Multi-Action Decision System
 Four action types:
-- `REQUEST_NEXT` — Reveal next clause
-- `FLAG_RISK` — Identify risky clause with specific risk label
-- `DECIDE` — Make accept/negotiate/reject decision on a clause
-- `FINALIZE` — Complete review and get final score
+- `request_next_clause` — Reveal next clause
+- `flag_risk` — Identify a risky clause with a specific risk label
+- `make_decision` — Accept / negotiate / reject a clause
+- `finalize_review` — Complete review and receive final score
 
-### 3. **Cost/Penalty Mechanics**
+### 3. Cost / Penalty Mechanics
 Every step costs exploration budget:
 - Correct risk flags → **+0.4 reward**
-- False positives → **-0.3 penalty**
+- False positives → **−0.3 penalty**
 - Strategic decisions → **+0.3 bonus**
-- Each step → **-0.05 cost**
+- Each step → **−0.05 cost**
 
-### 4. **Ambiguous Contracts**
-Three difficulty levels with increasingly complex language:
+### 4. Three Difficulty Levels
 - **Easy**: Obvious keywords (e.g., "unlimited liability")
-- **Medium**: Indirect wording (e.g., "shall continue in successive terms...")
+- **Medium**: Indirect wording (e.g., "shall continue in successive terms…")
 - **Hard**: Conflicting clauses, compound risks, legal jargon
 
-### 5. **Strategic Tradeoffs**
-Agents must balance:
-- **Risk severity** vs. **business value**
-- **Precision** vs. **recall**
-- **Exploration** vs. **budget efficiency**
+### 5. Strategic Tradeoffs
+Agents must balance risk severity vs. business value, precision vs. recall, and exploration efficiency.
 
 ---
 
@@ -98,57 +97,48 @@ Agents must balance:
 
 ```json
 {
-  "type": "request_next_clause" | "flag_risk" | "make_decision" | "finalize_review",
-  "clause_id": "C1",                    // for flag_risk, make_decision
-  "risk_label": "unlimited_liability",  // for flag_risk
-  "decision": "accept" | "negotiate" | "reject",  // for make_decision
+  "type": "request_next_clause | flag_risk | make_decision | finalize_review",
+  "clause_id": "C1",
+  "risk_label": "unlimited_liability",
+  "decision": "accept | negotiate | reject",
   "justification": "High severity risk with low business value"
 }
 ```
 
-### Risk Types
+### Risk Labels
 
-- `unlimited_liability`
-- `auto_renewal`
-- `unilateral_termination`
-- `ip_transfer`
-- `exclusivity`
-- `penalty_clause`
-- `unfavorable_jurisdiction`
-- `broad_indemnification`
-- `overly_broad_confidentiality`
-- `restrictive_non_compete`
+`unlimited_liability` · `auto_renewal` · `unilateral_termination` · `ip_transfer` · `exclusivity` · `penalty_clause` · `unfavorable_jurisdiction` · `broad_indemnification` · `overly_broad_confidentiality` · `restrictive_non_compete`
 
 ### Reward Structure
 
 | Component | Value |
-|-----------|-------|
+|---|---|
 | Correct flag | +0.4 |
-| False positive | -0.3 |
-| False negative penalty | -0.5 |
+| False positive | −0.3 |
+| False negative penalty | −0.5 |
 | Good decision | +0.3 |
 | Exploration | +0.1 |
-| Step cost | -0.05 |
+| Step cost | −0.05 |
 
 ---
 
 ## 🎓 Tasks
 
-### Task 1: Easy Detection
+### Task 1: Easy Detection (`easy_detection`)
 - **Difficulty**: Easy
 - **Contract**: Simple SaaS agreement
 - **Objective**: Identify obvious risk clauses
 - **Target Score**: 0.7
 - **Grader**: Risk detection accuracy (F1 score)
 
-### Task 2: Medium Analysis
+### Task 2: Medium Analysis (`medium_analysis`)
 - **Difficulty**: Medium
 - **Contract**: Vendor agreement with indirect wording
 - **Objective**: Flag hidden risks AND make strategic decisions
 - **Target Score**: 0.65
-- **Grader**: Decision quality (weighted by risk/value tradeoffs)
+- **Grader**: Decision quality (weighted by risk / value tradeoffs)
 
-### Task 3: Hard Comprehensive
+### Task 3: Hard Comprehensive (`hard_comprehensive`)
 - **Difficulty**: Hard
 - **Contract**: Complex partnership agreement
 - **Objective**: Comprehensive review with efficiency constraints
@@ -160,9 +150,17 @@ Agents must balance:
 ## 🛠️ Setup & Installation
 
 ### Prerequisites
-
 - Python 3.11+
 - Docker (for containerized deployment)
+
+### Environment Variables
+
+```bash
+export API_BASE_URL="https://api.openai.com/v1"   # LLM API endpoint
+export MODEL_NAME="gpt-4o-mini"                    # Model identifier
+export HF_TOKEN="your-huggingface-token"           # HF / API key
+export ENV_URL="http://localhost:7860"             # Environment URL
+```
 
 ### Local Development
 
@@ -173,7 +171,7 @@ pip install -r requirements.txt
 # Start server
 python -m uvicorn server.app:app --host 0.0.0.0 --port 7860
 
-# Test endpoint
+# Health check
 curl http://localhost:7860/
 ```
 
@@ -184,20 +182,14 @@ curl http://localhost:7860/
 docker build -t contract-review-env .
 
 # Run container
-docker run -p 7860:7860 contract-review-env
+docker run -p 7860:7860 \
+  -e API_BASE_URL="https://api.openai.com/v1" \
+  -e MODEL_NAME="gpt-4o-mini" \
+  -e HF_TOKEN="your-token" \
+  contract-review-env
 
 # Health check
 curl http://localhost:7860/
-```
-
-### Environment Variables
-
-```bash
-# For inference.py
-export OPENAI_API_KEY="your-api-key"
-export MODEL_NAME="gpt-4"
-export API_BASE_URL="https://api.openai.com/v1"
-export ENV_URL="http://localhost:7860"
 ```
 
 ---
@@ -207,18 +199,23 @@ export ENV_URL="http://localhost:7860"
 ```bash
 # Run baseline agent on all tasks
 python inference.py
+```
 
-# Expected output:
-# [INFERENCE] Task easy_detection: score=0.750
-# [INFERENCE] Task medium_analysis: score=0.680
-# [INFERENCE] Task hard_comprehensive: score=0.620
-# [INFERENCE] Average Score: 0.683
+### Expected Output (structured JSON logs)
+
+```json
+{"event": "START", "task": "easy_detection", "env": "contract_review_v2", "model": "gpt-4o-mini"}
+{"event": "STEP", "step": 1, "action": {"type": "request_next_clause"}, "reward": 0.05, "done": false, "error": null}
+{"event": "STEP", "step": 2, "action": {"type": "flag_risk", "clause_id": "C2", "risk_label": "unlimited_liability"}, "reward": 0.35, "done": false, "error": null}
+{"event": "STEP", "step": 3, "action": {"type": "make_decision", "clause_id": "C2", "decision": "reject"}, "reward": 0.3, "done": false, "error": null}
+{"event": "STEP", "step": 4, "action": {"type": "finalize_review"}, "reward": 0.0, "done": true, "error": null}
+{"event": "END", "success": true, "steps": 4, "score": 0.75, "rewards": [0.05, 0.35, 0.3, 0.0]}
 ```
 
 ### Baseline Results
 
 | Task | Difficulty | Baseline Score |
-|------|-----------|---------------|
+|---|---|---|
 | easy_detection | Easy | ~0.75 |
 | medium_analysis | Medium | ~0.68 |
 | hard_comprehensive | Hard | ~0.62 |
@@ -228,6 +225,7 @@ python inference.py
 ## 📊 Grading Logic
 
 ### Risk Detection Grader (Easy)
+
 ```python
 F1 = 2 * precision * recall / (precision + recall)
 exploration_penalty = max(0, 0.7 - exploration_ratio) * 0.3
@@ -235,19 +233,18 @@ score = F1 - exploration_penalty
 ```
 
 ### Decision Quality Grader (Medium)
-```python
-# For each decision:
-if accept && no_risks: score = 1.0
-if accept && has_risks: score = 1.0 - severity
-if negotiate && high_value_risk: score = 1.0
-if reject && high_severity: score = 1.0
 
-avg_decision_score = mean(decision_scores)
-decision_coverage = decisions_made / clauses_seen
+```python
+if accept and no_risks:        score = 1.0
+if accept and has_risks:       score = 1.0 - severity
+if negotiate and high_value:   score = 1.0
+if reject and high_severity:   score = 1.0
+
 final = avg_decision_score * 0.7 + decision_coverage * 0.3
 ```
 
 ### Comprehensive Grader (Hard)
+
 ```python
 final_score = (
     risk_detection_score * 0.4 +
@@ -261,17 +258,14 @@ final_score = (
 ## 🧪 API Endpoints
 
 ### `GET /`
-Health check
+Health check — returns `200 OK`
 
 ### `GET /tasks`
 List all available tasks
 
 ### `POST /reset`
 ```json
-{
-  "task_id": "easy_detection",
-  "contract_id": "EASY_001"  // optional
-}
+{ "task_id": "easy_detection", "contract_id": "EASY_001" }
 ```
 
 ### `POST /step`
@@ -289,112 +283,73 @@ List all available tasks
 Get current environment state
 
 ### `POST /grade`
-Grade current episode
-
----
-
-## 🎯 What Makes This Environment Strong
-
-### ✅ Real-world utility (30%)
-- Models actual legal review workflow
-- Progressive revelation mirrors human reading
-- Strategic decisions reflect real tradeoffs
-- Immediately useful for evaluating legal AI agents
-
-### ✅ Task & grader quality (25%)
-- 3 tasks with clear difficulty progression
-- Deterministic graders with 0.0-1.0 scores
-- Hard task genuinely challenges frontier models
-- Graders measure multiple dimensions (detection, decisions, efficiency)
-
-### ✅ Environment design (20%)
-- True state transitions (clauses revealed progressively)
-- Multi-action system creates strategic pressure
-- Cost/penalty mechanics enforce efficiency
-- Episode boundaries clear (finalize or max steps)
-- Reward function provides continuous signal
-
-### ✅ Code quality & spec compliance (15%)
-- Full OpenEnv spec implementation
-- Typed Pydantic models
-- Clean FastAPI structure
-- Working Dockerfile
-- Comprehensive documentation
-
-### ✅ Creativity & novelty (10%)
-- First interactive contract review environment
-- Decision layer adds strategic depth
-- Budget mechanics create time pressure
-- Novel grading approach (multi-dimensional)
-
-**Projected Total Score: 88/100** (likely winner)
-
----
-
-## 📁 Project Structure
-
-```
-contract_env_upgraded/
-├── server/
-│   ├── app.py              # FastAPI server
-│   └── environment.py      # Core environment logic
-├── contracts/
-│   └── datasets.py         # Contract data (easy/medium/hard)
-├── tasks/
-│   └── graders.py          # Task definitions + grading logic
-├── inference.py            # Baseline agent script
-├── openenv.yaml            # OpenEnv specification
-├── Dockerfile              # Container configuration
-├── requirements.txt        # Python dependencies
-└── README.md              # This file
-```
+Grade the current episode — returns `{ "score": 0.75 }`
 
 ---
 
 ## 🔍 Example Episode
 
 ```python
-# 1. Agent starts, sees first clause
-observation = env.reset()
-# visible_clauses: [C1], exploration_budget: 1.0
+# 1. Reset environment for a task
+obs = await env.reset("easy_detection")
+# → visible_clauses: [C1], exploration_budget: 1.0
 
-# 2. Agent requests next clause
-obs, reward, done, _ = env.step({"type": "request_next_clause"})
-# reward: +0.05 (exploration), visible_clauses: [C1, C2]
+# 2. Request next clause
+obs, reward, done, _ = await env.step({"type": "request_next_clause"})
+# → reward: +0.05 (exploration), visible_clauses: [C1, C2]
 
-# 3. Agent flags risk in C2
-obs, reward, done, _ = env.step({
+# 3. Flag risk in C2
+obs, reward, done, _ = await env.step({
     "type": "flag_risk",
     "clause_id": "C2",
     "risk_label": "unlimited_liability"
 })
-# reward: +0.4 (correct flag) - 0.05 (step cost) = +0.35
+# → reward: +0.4 (correct) − 0.05 (step cost) = +0.35
 
-# 4. Agent decides to reject C2
-obs, reward, done, _ = env.step({
+# 4. Reject C2
+obs, reward, done, _ = await env.step({
     "type": "make_decision",
     "clause_id": "C2",
     "decision": "reject"
 })
-# reward: +0.3 (good decision on high-risk clause)
+# → reward: +0.3 (good decision on high-risk clause)
 
-# 5. Agent finalizes review
-obs, reward, done, _ = env.step({"type": "finalize_review"})
-# done: True, final grade calculated
+# 5. Finalize
+obs, reward, done, _ = await env.step({"type": "finalize_review"})
+# → done: True, final grade calculated via POST /grade
 ```
 
 ---
 
-## 🏆 Competitive Advantages
+## 🎯 Evaluation Alignment
 
-1. **Not just classification** — Interactive multi-step system
-2. **True environment dynamics** — State changes meaningfully
-3. **Strategic pressure** — Budget + penalty mechanics
-4. **Real legal complexity** — Ambiguous language, compound risks
-5. **Decision layer** — Accept/negotiate/reject adds depth
-6. **Comprehensive grading** — Multi-dimensional evaluation
+| Criterion | How This Environment Addresses It |
+|---|---|
+| **Real-world utility (30%)** | Models actual legal review workflow; immediately useful for legal AI evaluation |
+| **Task & grader quality (25%)** | 3 tasks with clear difficulty progression; deterministic graders; multi-dimensional scoring |
+| **Environment design (20%)** | True state transitions; multi-action system; cost/penalty mechanics; clear episode boundaries |
+| **Code quality & compliance (15%)** | Full OpenEnv spec; typed Pydantic models; clean FastAPI structure; working Dockerfile |
+| **Creativity & novelty (10%)** | First interactive contract review environment; decision layer adds strategic depth |
 
-This is **not** an LLM wrapper. This is an **interactive reasoning environment**.
+---
+
+## 📁 Project Structure
+
+```
+contract-review-env/
+├── server/
+│   ├── app.py              # FastAPI server (reset / step / state / grade)
+│   └── environment.py      # Core environment logic
+├── contracts/
+│   └── datasets.py         # Contract data (easy / medium / hard)
+├── tasks/
+│   └── graders.py          # Task definitions + grading logic
+├── inference.py            # Baseline agent script (root directory)
+├── openenv.yaml            # OpenEnv specification
+├── Dockerfile              # Container configuration
+├── requirements.txt        # Python dependencies
+└── README.md               # This file
+```
 
 ---
 
@@ -402,10 +357,10 @@ This is **not** an LLM wrapper. This is an **interactive reasoning environment**
 
 **Author**: Rohan Mathew Rogers  
 **Email**: rohanrogers10@gmail.com  
-**Hackathon**: Meta OpenEnv Round 1
+**Hackathon**: Meta OpenEnv Round 1 — Scaler School of Technology × Hugging Face × PyTorch
 
 ---
 
 ## 📜 License
 
-MIT License - Built for Meta OpenEnv Hackathon 2026
+MIT License — Built for Meta OpenEnv Hackathon 2026

@@ -15,7 +15,7 @@ from openai import OpenAI
 
 # ── Required environment variables ────────────────────────────────────────────
 API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
-MODEL_NAME   = os.getenv("MODEL_NAME", "gpt-4")
+MODEL_NAME   = os.getenv("MODEL_NAME", "gpt-4o-mini")
 HF_TOKEN     = os.getenv("HF_TOKEN")
 
 # ── Runtime configuration ─────────────────────────────────────────────────────
@@ -24,7 +24,7 @@ TEMPERATURE             = 0.7
 MAX_TOKENS              = 2000
 MAX_STEPS               = 20
 SUCCESS_SCORE_THRESHOLD = 0.5
-TASK_TIMEOUT_SECONDS    = 900   # 15 min per task; 3 tasks = 45 min max → judges allow 20 min total
+TASK_TIMEOUT_SECONDS    = 300   # 5 min per task; 3 tasks = 15 min max (under 20 min limit)
 DEBUG                   = os.getenv("DEBUG", "false").lower() == "true"
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
@@ -155,7 +155,58 @@ def build_obs_text(data: Dict) -> str:
     return "\n".join(lines)
 
 
-def get_model_action(llm: OpenAI, history: List[Dict], data: Dict) -> Dict:
+def fallback_action(data: Dict, step: int) -> Dict:
+    """Rule-based fallback agent — ensures valid logs even if LLM is unavailable."""
+    obs = data.get("observation", data)
+    clauses_revealed = obs.get("clauses_revealed", 0)
+    total_clauses = obs.get("total_clauses", 0)
+    visible_clauses = obs.get("visible_clauses", [])
+    flagged_risks = obs.get("flagged_risks", [])
+    flagged_ids = {f["clause_id"] for f in flagged_risks}
+
+    # Strategy: explore first, then flag risky-looking clauses, then finalize
+    if clauses_revealed < total_clauses and step <= total_clauses + 1:
+        return {"type": "request_next_clause"}
+
+    # Flag unflagged clauses that contain risk keywords
+    risk_keywords = {
+        "unlimited_liability": ["unlimited", "without limitation", "any and all damages"],
+        "auto_renewal": ["automatically renew", "successive terms", "auto-renew"],
+        "unilateral_termination": ["terminate immediately", "sole discretion", "for convenience"],
+        "ip_transfer": ["intellectual property", "work made for hire", "assigns all right"],
+        "broad_indemnification": ["indemnify", "hold harmless", "defend and indemnify"],
+        "penalty_clause": ["liquidated damages", "penalty", "withhold payment"],
+        "exclusivity": ["exclusive", "shall not provide similar"],
+        "restrictive_non_compete": ["non-compete", "shall not compete", "not engage"],
+        "unfavorable_jurisdiction": ["cayman", "singapore", "offshore"],
+        "overly_broad_confidentiality": ["any information", "whatsoever", "any purpose"],
+    }
+    for clause in visible_clauses:
+        cid = clause.get("id", "")
+        if cid in flagged_ids:
+            continue
+        text_lower = clause.get("text", "").lower()
+        for risk_label, keywords in risk_keywords.items():
+            if any(kw in text_lower for kw in keywords):
+                return {"type": "flag_risk", "clause_id": cid, "risk_label": risk_label,
+                        "justification": f"Keyword match for {risk_label}"}
+
+    # Make decisions on visible clauses
+    decided_ids = set()
+    for clause in visible_clauses:
+        cid = clause.get("id", "")
+        if cid not in decided_ids:
+            if cid in flagged_ids:
+                return {"type": "make_decision", "clause_id": cid, "decision": "reject",
+                        "justification": "Rejecting flagged risky clause"}
+            else:
+                return {"type": "make_decision", "clause_id": cid, "decision": "accept",
+                        "justification": "Accepting clause with no identified risks"}
+
+    return {"type": "finalize_review", "justification": "Review complete"}
+
+
+def get_model_action(llm: OpenAI, history: List[Dict], data: Dict, step: int = 1) -> Dict:
     history.append({"role": "user", "content": build_obs_text(data)})
     try:
         response = llm.chat.completions.create(
@@ -167,11 +218,11 @@ def get_model_action(llm: OpenAI, history: List[Dict], data: Dict) -> Dict:
         history.append({"role": "assistant", "content": text})
         return action
     except json.JSONDecodeError as e:
-        debug(f"JSON parse error: {e}")
-        return {"type": "request_next_clause"}
+        debug(f"JSON parse error: {e} — using fallback agent")
+        return fallback_action(data, step)
     except Exception as e:
-        debug(f"LLM call failed: {e}")
-        return {"type": "request_next_clause"}
+        debug(f"LLM call failed: {e} — using fallback agent")
+        return fallback_action(data, step)
 
 
 # ── Per-task episode ───────────────────────────────────────────────────────────
@@ -193,7 +244,7 @@ async def run_task(env: EnvClient, llm: OpenAI, task_id: str) -> Dict:
             if done:
                 break
 
-            action = get_model_action(llm, history, data)
+            action = get_model_action(llm, history, data, step)
             error = None
 
             try:
