@@ -1,0 +1,121 @@
+# OpenEnv spec — required fields for `openenv validate`
+spec_version: "1.0"
+type: environment
+runtime: docker
+
+app:
+  port: 7860
+  host: "0.0.0.0"
+
+# ── Identity ──────────────────────────────────────────────────────────────────
+name: contract-review-environment
+version: 2.0.0
+description: >
+  Interactive legal contract review environment with progressive clause
+  revelation, multi-action decision system, and strategic tradeoffs.
+
+author:
+  name: Rohan Mathew Rogers
+  email: rohanrogers10@gmail.com
+
+# ── API endpoints ─────────────────────────────────────────────────────────────
+api:
+  base_url: "http://0.0.0.0:7860"
+  endpoints:
+    reset: /reset
+    step:  /step
+    state: /state
+
+# ── Observation space ─────────────────────────────────────────────────────────
+observation_space:
+  type: object
+  properties:
+    visible_clauses:
+      type: array
+      description: Currently visible contract clauses
+    flagged_risks:
+      type: array
+      description: Risks flagged by the agent so far
+    total_clauses:
+      type: integer
+    clauses_revealed:
+      type: integer
+    current_step:
+      type: integer
+    max_steps:
+      type: integer
+    exploration_budget:
+      type: number
+    message:
+      type: string
+
+# ── Action space ──────────────────────────────────────────────────────────────
+action_space:
+  type: object
+  properties:
+    type:
+      type: string
+      enum:
+        - request_next_clause
+        - flag_risk
+        - make_decision
+        - finalize_review
+    clause_id:
+      type: string
+    risk_label:
+      type: string
+      enum:
+        - unlimited_liability
+        - auto_renewal
+        - unilateral_termination
+        - ip_transfer
+        - exclusivity
+        - penalty_clause
+        - unfavorable_jurisdiction
+        - broad_indemnification
+        - overly_broad_confidentiality
+        - restrictive_non_compete
+    decision:
+      type: string
+      enum: [accept, negotiate, reject]
+    justification:
+      type: string
+
+# ── Reward ────────────────────────────────────────────────────────────────────
+reward_space:
+  type: number
+  min: 0.0
+  max: 1.0
+
+# ── Tasks (3 required; easy → medium → hard) ──────────────────────────────────
+tasks:
+  - id: easy_detection
+    difficulty: easy
+    description: >
+      Review a simple SaaS contract and identify obvious risks
+      (auto-renewal, unlimited liability).
+    target_score: 0.7
+
+  - id: medium_analysis
+    difficulty: medium
+    description: >
+      Analyze a vendor agreement with indirect wording. Identify hidden risks
+      (unilateral termination, broad indemnification) and make
+      accept/negotiate/reject decisions.
+    target_score: 0.65
+
+  - id: hard_comprehensive
+    difficulty: hard
+    description: >
+      Comprehensive review of a complex partnership agreement with conflicting
+      clauses, ambiguous language, and multiple compounded risks. Balance
+      efficiency, accuracy, and strategic decision-making.
+    target_score: 0.6
+
+tags:
+  - legal
+  - contract-review
+  - decision-making
+  - strategic-reasoning
+  - multi-objective
+  - openenv
