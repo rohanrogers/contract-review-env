@@ -1,3 +1,21 @@
+---
+title: Contract Review Environment
+emoji: ⚖️
+colorFrom: blue
+colorTo: indigo
+sdk: docker
+app_port: 7860
+base_path: /docs
+license: mit
+pinned: false
+tags:
+  - openenv
+  - legal
+  - contract-review
+  - reinforcement-learning
+  - decision-making
+---
+
 # Contract Review Environment v2.0 🔍⚖️
 
 **Interactive legal contract review environment for AI agent training and evaluation**
