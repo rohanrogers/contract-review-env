@@ -16,7 +16,7 @@ from openai import OpenAI
 # ── Required environment variables ────────────────────────────────────────────
 API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
 MODEL_NAME   = os.getenv("MODEL_NAME", "gpt-4")
-HF_TOKEN     = os.getenv("HF_TOKEN", "")
+HF_TOKEN     = os.getenv("HF_TOKEN")
 
 # ── Runtime configuration ─────────────────────────────────────────────────────
 ENV_URL                 = os.getenv("ENV_URL", "http://localhost:7860")
