@@ -26,6 +26,7 @@ api:
     step:  /step
     state: /state
     grade: /grade
+    tasks: /tasks
 
 # ── Observation space ─────────────────────────────────────────────────────────
 observation_space:
@@ -85,7 +86,7 @@ action_space:
 # ── Reward ────────────────────────────────────────────────────────────────────
 reward_space:
   type: number
-  min: 0.0
+  min: -1.0
   max: 1.0
 
 # ── Tasks (3 required; easy → medium → hard) ──────────────────────────────────
