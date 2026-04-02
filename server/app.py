@@ -242,6 +242,10 @@ async def grade():
         max_score=1.0
     )
 
+def main(host: str = "0.0.0.0", port: int = 7860):
+    """Entry point for direct execution."""
+    uvicorn.run(app, host=host, port=port)
+
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=7860)
+    main()
