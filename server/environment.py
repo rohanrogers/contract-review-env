@@ -7,7 +7,6 @@ from typing import Dict, List, Optional, Set, Tuple
 from enum import Enum
 from pydantic import BaseModel, Field
 import random
-import copy
 
 
 class RiskType(str, Enum):
