@@ -200,15 +200,15 @@ curl http://localhost:7860/
 python inference.py
 ```
 
-### Expected Output (structured JSON logs)
+### Expected Output (structured stdout logs)
 
-```json
-{"event": "START", "task": "easy_detection", "env": "contract_review_v2", "model": "gpt-4o-mini"}
-{"event": "STEP", "step": 1, "action": {"type": "request_next_clause"}, "reward": 0.05, "done": false, "error": null}
-{"event": "STEP", "step": 2, "action": {"type": "flag_risk", "clause_id": "C2", "risk_label": "unlimited_liability"}, "reward": 0.35, "done": false, "error": null}
-{"event": "STEP", "step": 3, "action": {"type": "make_decision", "clause_id": "C2", "decision": "reject"}, "reward": 0.3, "done": false, "error": null}
-{"event": "STEP", "step": 4, "action": {"type": "finalize_review"}, "reward": 0.0, "done": true, "error": null}
-{"event": "END", "success": true, "steps": 4, "score": 0.75, "rewards": [0.05, 0.35, 0.3, 0.0]}
+```
+[START] task=easy_detection env=contract_review_v2 model=gpt-4o-mini
+[STEP] step=1 action={"type": "request_next_clause"} reward=0.05 done=false error=null
+[STEP] step=2 action={"type": "flag_risk", "clause_id": "C2", "risk_label": "unlimited_liability"} reward=0.35 done=false error=null
+[STEP] step=3 action={"type": "make_decision", "clause_id": "C2", "decision": "reject"} reward=0.30 done=false error=null
+[STEP] step=4 action={"type": "finalize_review"} reward=0.00 done=true error=null
+[END] success=true steps=4 rewards=0.05,0.35,0.30,0.00
 ```
 
 ### Baseline Results

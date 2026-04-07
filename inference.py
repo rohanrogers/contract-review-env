@@ -18,6 +18,9 @@ API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
 MODEL_NAME   = os.getenv("MODEL_NAME", "gpt-4o-mini")
 HF_TOKEN     = os.getenv("HF_TOKEN")
 
+if HF_TOKEN is None:
+    raise ValueError("HF_TOKEN environment variable is required")
+
 # ── Runtime configuration ─────────────────────────────────────────────────────
 ENV_URL                 = os.getenv("ENV_URL", "http://localhost:7860")
 TEMPERATURE             = 0.7
@@ -25,43 +28,47 @@ MAX_TOKENS              = 2000
 MAX_STEPS               = 20
 SUCCESS_SCORE_THRESHOLD = 0.5
 TASK_TIMEOUT_SECONDS    = 300   # 5 min per task; 3 tasks = 15 min max (under 20 min limit)
-DEBUG                   = os.getenv("DEBUG", "false").lower() == "true"
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 
-# ── Structured logging helpers (must match spec exactly) ──────────────────────
+# ── Structured logging helpers ────────────────────────────────────────────────
+# CRITICAL: The validator parses lines starting with literal [START], [STEP], [END].
+# These MUST be plain text, NOT JSON. Rewards must be 2 decimal places.
+# Booleans must be lowercase "true"/"false". No other stdout output allowed.
+
+def fmt_reward(r: float) -> str:
+    """Format reward to exactly 2 decimal places."""
+    return f"{r:.2f}"
+
 
 def log_start(*, task: str, env: str, model: str) -> None:
-    print(json.dumps({"event": "START", "task": task, "env": env, "model": model}), flush=True)
+    print(f"[START] task={task} env={env} model={model}", flush=True)
 
 
 def log_step(*, step: int, action, reward: float, done: bool, error=None) -> None:
-    # 'error' field is always emitted (null when no error) to match spec field ordering exactly
-    payload = {
-        "event": "STEP",
-        "step": step,
-        "action": action,
-        "reward": round(reward, 4),
-        "done": done,
-        "error": str(error) if error is not None else None,
-    }
-    print(json.dumps(payload), flush=True)
+    action_str = json.dumps(action) if isinstance(action, dict) else str(action)
+    done_str = "true" if done else "false"
+    error_str = str(error) if error is not None else "null"
+    print(
+        f"[STEP] step={step} action={action_str} "
+        f"reward={fmt_reward(reward)} done={done_str} error={error_str}",
+        flush=True
+    )
 
 
-def log_end(*, success: bool, steps: int, score: float, rewards: list) -> None:
-    print(json.dumps({
-        "event": "END",
-        "success": success,
-        "steps": steps,
-        "score": round(score, 4),
-        "rewards": [round(r, 4) for r in rewards],
-    }), flush=True)
+def log_end(*, success: bool, steps: int, rewards: list) -> None:
+    success_str = "true" if success else "false"
+    rewards_str = ",".join(fmt_reward(r) for r in rewards)
+    print(
+        f"[END] success={success_str} steps={steps} rewards={rewards_str}",
+        flush=True
+    )
 
 
 def debug(msg: str) -> None:
-    if DEBUG:
-        print(f"[DEBUG] {msg}", flush=True)
+    """Debug output goes to stderr only — never pollute stdout."""
+    print(f"[DEBUG] {msg}", file=sys.stderr, flush=True)
 
 
 # ── Thin async OpenEnv client ─────────────────────────────────────────────────
@@ -273,7 +280,7 @@ async def run_task(env: EnvClient, llm: OpenAI, task_id: str) -> Dict:
         success = score >= SUCCESS_SCORE_THRESHOLD
 
     finally:
-        log_end(success=success, steps=steps_taken, score=score, rewards=rewards)
+        log_end(success=success, steps=steps_taken, rewards=rewards)
 
     return {"task_id": task_id, "score": score, "steps": steps_taken}
 
@@ -281,12 +288,9 @@ async def run_task(env: EnvClient, llm: OpenAI, task_id: str) -> Dict:
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 async def main():
-    if not HF_TOKEN:
-        print(json.dumps({"event": "WARN", "message": "HF_TOKEN not set — using ENV_URL directly without LLM auth"}), flush=True)
-
     debug(f"Model: {MODEL_NAME} | API: {API_BASE_URL} | Env: {ENV_URL}")
 
-    llm = OpenAI(api_key=HF_TOKEN or "sk-placeholder", base_url=API_BASE_URL)
+    llm = OpenAI(api_key=HF_TOKEN, base_url=API_BASE_URL)
 
     async with EnvClient(ENV_URL) as env:
         task_list = await env.tasks()
@@ -306,9 +310,7 @@ async def main():
                 results.append({"task_id": task_id, "score": 0.0, "steps": MAX_STEPS})
 
     avg_score = sum(r["score"] for r in results) / len(results) if results else 0.0
-    with open("baseline_results.json", "w") as f:
-        json.dump({"model": MODEL_NAME, "results": results, "average_score": avg_score}, f, indent=2)
-    debug(f"Average score: {avg_score:.4f} — saved to baseline_results.json")
+    debug(f"Average score: {avg_score:.4f}")
 
 
 if __name__ == "__main__":
