@@ -278,9 +278,9 @@ async def run_task(env: EnvClient, llm: OpenAI, task_id: str) -> Dict:
             score = float(grade_data.get("score", 0.0))
         except Exception as e:
             debug(f"Grade failed: {e}")
-            score = sum(rewards) / len(rewards) if rewards else 0.0
+            score = sum(rewards) / len(rewards) if rewards else 0.01
 
-        score = min(max(score, 0.0), 1.0)
+        score = min(max(score, 0.01), 0.99)
         success = score >= SUCCESS_SCORE_THRESHOLD
 
     finally:

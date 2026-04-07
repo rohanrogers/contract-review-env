@@ -53,7 +53,7 @@ class RiskDetectionGrader(TaskGrader):
         exploration_penalty = max(0, 0.7 - exploration_ratio) * 0.3
         
         score = f1 - exploration_penalty
-        return max(0.0, min(1.0, score))
+        return max(0.01, min(0.99, score))
 
 
 class DecisionQualityGrader(TaskGrader):
@@ -61,7 +61,7 @@ class DecisionQualityGrader(TaskGrader):
     
     def grade(self, env: ContractReviewEnvironment) -> float:
         if not env.decisions_made:
-            return 0.0
+            return 0.01
         
         total_score = 0.0
         num_decisions = 0
@@ -109,7 +109,7 @@ class DecisionQualityGrader(TaskGrader):
         decision_coverage = len(env.decisions_made) / len(env.visible_clause_ids) if env.visible_clause_ids else 0.0
         
         final_score = avg_score * 0.7 + decision_coverage * 0.3
-        return max(0.0, min(1.0, final_score))
+        return max(0.01, min(0.99, final_score))
 
 
 class EfficiencyGrader(TaskGrader):
@@ -139,7 +139,7 @@ class EfficiencyGrader(TaskGrader):
             precision * 0.4
         )
         
-        return max(0.0, min(1.0, efficiency_score))
+        return max(0.01, min(0.99, efficiency_score))
 
 
 class ComprehensiveGrader(TaskGrader):
@@ -161,7 +161,7 @@ class ComprehensiveGrader(TaskGrader):
             efficiency_score * 0.2
         )
         
-        return max(0.0, min(1.0, final_score))
+        return max(0.01, min(0.99, final_score))
 
 
 # Task definitions
