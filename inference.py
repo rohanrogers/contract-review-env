@@ -37,6 +37,11 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # These MUST be plain text, NOT JSON. Rewards must be 2 decimal places.
 # Booleans must be lowercase "true"/"false". No other stdout output allowed.
 
+def clamp_reward(r: float) -> float:
+    """Clamp reward to strict (0, 1) range — validator rejects 0.0 and 1.0."""
+    return max(0.01, min(0.99, r))
+
+
 def fmt_reward(r: float) -> str:
     """Format reward to exactly 2 decimal places."""
     return f"{r:.2f}"
@@ -261,14 +266,16 @@ async def run_task(env: EnvClient, llm: OpenAI, task_id: str) -> Dict:
             try:
                 data = await env.step(action)
                 reward_obj = data.get("reward", {})
-                reward = float(reward_obj.get("value", 0.0)) if isinstance(reward_obj, dict) else float(reward_obj)
+                raw_reward = float(reward_obj.get("value", 0.0)) if isinstance(reward_obj, dict) else float(reward_obj)
                 done = bool(data.get("done", False))
             except Exception as e:
                 error = str(e)
-                reward = 0.0
+                raw_reward = 0.0
                 done = True
                 debug(f"Step {step} error: {e}")
 
+            # Clamp reward to strict (0, 1) — validator rejects 0.0 and 1.0
+            reward = clamp_reward(raw_reward)
             rewards.append(reward)
             steps_taken = step
             log_step(step=step, action=action, reward=reward, done=done, error=error)
@@ -318,7 +325,9 @@ async def main():
                 results.append(result)
             except asyncio.TimeoutError:
                 debug(f"Task {task_id} timed out after {TASK_TIMEOUT_SECONDS}s")
-                results.append({"task_id": task_id, "score": 0.0, "steps": MAX_STEPS})
+                # CRITICAL: Always emit [END] even on timeout
+                log_end(success=False, steps=MAX_STEPS, rewards=[0.01])
+                results.append({"task_id": task_id, "score": 0.01, "steps": MAX_STEPS})
 
     avg_score = sum(r["score"] for r in results) / len(results) if results else 0.0
     debug(f"Average score: {avg_score:.4f}")

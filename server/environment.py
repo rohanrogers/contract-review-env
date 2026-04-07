@@ -143,7 +143,7 @@ class ContractReviewEnvironment:
         if self.is_finalized:
             return (
                 self._get_observation("Review already finalized."),
-                Reward(value=0.0),
+                Reward(value=0.01),
                 True,
                 {"error": "already_finalized"}
             )
@@ -193,10 +193,12 @@ class ContractReviewEnvironment:
             message += " Exploration budget exhausted."
         
         total_reward = sum(reward_breakdown.values())
+        # Clamp reward to strict (0, 1) — validator rejects 0.0 and 1.0
+        clamped_reward = max(0.01, min(0.99, total_reward))
         
         return (
             self._get_observation(message),
-            Reward(value=total_reward, breakdown=reward_breakdown),
+            Reward(value=clamped_reward, breakdown=reward_breakdown),
             done,
             {"step": self.step_count}
         )
