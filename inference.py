@@ -16,7 +16,10 @@ from openai import OpenAI
 # ── Required environment variables ────────────────────────────────────────────
 API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
 MODEL_NAME   = os.getenv("MODEL_NAME", "gpt-4o-mini")
-HF_TOKEN     = os.getenv("HF_TOKEN", "")   # no crash at import time; checked in main()
+HF_TOKEN     = os.getenv("HF_TOKEN")
+
+if HF_TOKEN is None:
+    raise ValueError("HF_TOKEN environment variable is required")
 
 # ── Runtime configuration ─────────────────────────────────────────────────────
 ENV_URL                 = os.getenv("ENV_URL", "http://localhost:7860")
@@ -235,7 +238,7 @@ def get_model_action(llm: OpenAI, history: List[Dict], data: Dict, step: int = 1
 
 # ── Per-task episode ───────────────────────────────────────────────────────────
 
-async def run_task(env: EnvClient, llm: Optional[OpenAI], task_id: str) -> Dict:
+async def run_task(env: EnvClient, llm: OpenAI, task_id: str) -> Dict:
     history: List[Dict] = [{"role": "system", "content": SYSTEM_PROMPT}]
     rewards: List[float] = []
     steps_taken = 0
@@ -252,10 +255,7 @@ async def run_task(env: EnvClient, llm: Optional[OpenAI], task_id: str) -> Dict:
             if done:
                 break
 
-            if llm is not None:
-                action = get_model_action(llm, history, data, step)
-            else:
-                action = fallback_action(data, step)
+            action = get_model_action(llm, history, data, step)
             error = None
 
             try:
@@ -294,12 +294,7 @@ async def run_task(env: EnvClient, llm: Optional[OpenAI], task_id: str) -> Dict:
 async def main():
     debug(f"Model: {MODEL_NAME} | API: {API_BASE_URL} | Env: {ENV_URL}")
 
-    # Build LLM client only if token is available; otherwise run fallback-only
-    if HF_TOKEN:
-        llm = OpenAI(api_key=HF_TOKEN, base_url=API_BASE_URL)
-    else:
-        debug("HF_TOKEN not set — running fallback agent only (no LLM calls)")
-        llm = None
+    llm = OpenAI(api_key=HF_TOKEN, base_url=API_BASE_URL)
 
     # Fallback task IDs in case /tasks endpoint is unavailable
     FALLBACK_TASKS = ["easy_detection", "medium_analysis", "hard_comprehensive"]
