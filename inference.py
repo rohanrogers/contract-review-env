@@ -16,10 +16,7 @@ from openai import OpenAI
 # ── Required environment variables ────────────────────────────────────────────
 API_BASE_URL = os.getenv("API_BASE_URL", "https://api.openai.com/v1")
 MODEL_NAME   = os.getenv("MODEL_NAME", "gpt-4o-mini")
-HF_TOKEN     = os.getenv("HF_TOKEN")
-
-if HF_TOKEN is None:
-    raise ValueError("HF_TOKEN environment variable is required")
+HF_TOKEN     = os.getenv("HF_TOKEN", "")   # no crash at import time; checked in main()
 
 # ── Runtime configuration ─────────────────────────────────────────────────────
 ENV_URL                 = os.getenv("ENV_URL", "http://localhost:7860")
@@ -47,13 +44,17 @@ def log_start(*, task: str, env: str, model: str) -> None:
 
 
 def log_step(*, step: int, action, reward: float, done: bool, error=None) -> None:
-    action_str = json.dumps(action) if isinstance(action, dict) else str(action)
+    # Compact JSON + strip newlines to guarantee single-line output
+    if isinstance(action, dict):
+        action_str = json.dumps(action, separators=(",", ":"))
+    else:
+        action_str = str(action).replace("\n", " ")
     done_str = "true" if done else "false"
-    error_str = str(error) if error is not None else "null"
+    error_str = str(error).replace("\n", " ") if error is not None else "null"
     print(
         f"[STEP] step={step} action={action_str} "
         f"reward={fmt_reward(reward)} done={done_str} error={error_str}",
-        flush=True
+        flush=True,
     )
 
 
@@ -234,7 +235,7 @@ def get_model_action(llm: OpenAI, history: List[Dict], data: Dict, step: int = 1
 
 # ── Per-task episode ───────────────────────────────────────────────────────────
 
-async def run_task(env: EnvClient, llm: OpenAI, task_id: str) -> Dict:
+async def run_task(env: EnvClient, llm: Optional[OpenAI], task_id: str) -> Dict:
     history: List[Dict] = [{"role": "system", "content": SYSTEM_PROMPT}]
     rewards: List[float] = []
     steps_taken = 0
@@ -251,7 +252,10 @@ async def run_task(env: EnvClient, llm: OpenAI, task_id: str) -> Dict:
             if done:
                 break
 
-            action = get_model_action(llm, history, data, step)
+            if llm is not None:
+                action = get_model_action(llm, history, data, step)
+            else:
+                action = fallback_action(data, step)
             error = None
 
             try:
@@ -290,10 +294,19 @@ async def run_task(env: EnvClient, llm: OpenAI, task_id: str) -> Dict:
 async def main():
     debug(f"Model: {MODEL_NAME} | API: {API_BASE_URL} | Env: {ENV_URL}")
 
-    llm = OpenAI(api_key=HF_TOKEN, base_url=API_BASE_URL)
+    # Build LLM client only if token is available; otherwise run fallback-only
+    if HF_TOKEN:
+        llm = OpenAI(api_key=HF_TOKEN, base_url=API_BASE_URL)
+    else:
+        debug("HF_TOKEN not set — running fallback agent only (no LLM calls)")
+        llm = None
 
     async with EnvClient(ENV_URL) as env:
-        task_list = await env.tasks()
+        try:
+            task_list = await env.tasks()
+        except Exception as e:
+            debug(f"Could not fetch task list: {e}")
+            task_list = []
         debug(f"Found {len(task_list)} tasks")
 
         results = []
