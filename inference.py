@@ -301,17 +301,20 @@ async def main():
         debug("HF_TOKEN not set — running fallback agent only (no LLM calls)")
         llm = None
 
+    # Fallback task IDs in case /tasks endpoint is unavailable
+    FALLBACK_TASKS = ["easy_detection", "medium_analysis", "hard_comprehensive"]
+
     async with EnvClient(ENV_URL) as env:
         try:
             task_list = await env.tasks()
+            task_ids = [t if isinstance(t, str) else t["task_id"] for t in task_list]
         except Exception as e:
-            debug(f"Could not fetch task list: {e}")
-            task_list = []
-        debug(f"Found {len(task_list)} tasks")
+            debug(f"Could not fetch task list: {e} — using fallback task IDs")
+            task_ids = FALLBACK_TASKS
+        debug(f"Running {len(task_ids)} tasks")
 
         results = []
-        for task_info in task_list:
-            task_id = task_info if isinstance(task_info, str) else task_info["task_id"]
+        for task_id in task_ids:
             try:
                 result = await asyncio.wait_for(
                     run_task(env, llm, task_id),
