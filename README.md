@@ -139,10 +139,10 @@ Agents must balance risk severity vs. business value, precision vs. recall, and 
 
 ### Task 3: Hard Comprehensive (`hard_comprehensive`)
 - **Difficulty**: Hard
-- **Contract**: Complex partnership agreement
-- **Objective**: Comprehensive review with efficiency constraints
-- **Target Score**: 0.6
-- **Grader**: Combined metric (40% detection + 40% decisions + 20% efficiency)
+- **Contract**: Complex partnership agreement with high-value risky clauses
+- **Objective**: Strategic review balancing risk management against deal preservation
+- **Target Score**: 0.55
+- **Grader**: Combined metric (20% risk detection + 30% decision quality + 30% business awareness + 20% efficiency)
 
 ---
 
@@ -215,9 +215,9 @@ python inference.py
 
 | Task | Difficulty | Baseline Score |
 |---|---|---|
-| easy_detection | Easy | ~0.75 |
-| medium_analysis | Medium | ~0.68 |
-| hard_comprehensive | Hard | ~0.62 |
+| easy_detection | Easy | 0.75 |
+| medium_analysis | Medium | 0.65 |
+| hard_comprehensive | Hard | 0.55 |
 
 ---
 
