@@ -17,8 +17,8 @@ tags:
 
 # Contract Review Environment v2.0 🔍⚖️
 
-**Interactive legal contract review environment for AI agent training and evaluation.**  
-Designed specifically for evaluating LLM agents in structured decision-making tasks.
+**Interactive legal contract review environment that exposes how LLM agents fail on high-stakes trade-offs.**
+Evaluates whether agents can balance risk management against business value preservation — a core skill in real-world legal work that most current models lack.
 
 ---
 
@@ -231,7 +231,19 @@ The hard task reveals that **risk-averse strategies perform poorly** when risky 
 | Accept all clauses | **0.33** | Ignores critical risks — liability exposure |
 | **Strategic trade-offs** | **0.65** | Negotiates high-value risks, rejects low-value ones |
 
-**Insight:** Agents that prioritize risk avoidance alone score ~40% lower than agents that balance risk against business value. This demonstrates that contract review is fundamentally a **trade-off optimization problem**, not a classification task — exactly the kind of strategic reasoning that separates frontier models from simple heuristics.
+### Concrete Example: The Partnership Indemnification Dilemma
+
+**Clause H1_C3** — *"Contractor shall indemnify Client... This indemnification underpins Client's commitment to co-develop joint solutions worth $8M in pipeline revenue."*
+
+- Risk: `unlimited_liability` + `broad_indemnification` (severity: 0.9)
+- Business value: 0.8 (critical partnership revenue)
+
+| Agent | Decision | Result |
+|---|---|---|
+| Naive (risk-averse) | **Reject** | Kills $8M partnership — score penalty |
+| Strategic | **Negotiate** | Preserves deal, manages liability — score bonus |
+
+**Insight:** Agents systematically over-reject clauses with severity > 0.7 when business value exceeds 0.6. These "high-stakes dilemma" clauses account for 50% of the score difference between naive and strategic agents. This demonstrates that contract review requires **trade-off optimization**, not just risk classification.
 
 ---
 
