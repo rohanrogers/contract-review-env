@@ -250,17 +250,54 @@ def fallback_action(data: Dict, step: int, decided_ids: set) -> Dict:
     return {"type": "finalize_review", "justification": "All clauses reviewed and decided"}
 
 
-def strip_json_fences(text: str) -> str:
-    """Strip markdown ```json ... ``` fences that many LLMs wrap around JSON."""
+def extract_json(text: str) -> str:
+    """Extract JSON from LLM output — handles fences, surrounding text, and messy formatting.
+    
+    Critical: The validator uses Llama-3.1-8B (not GPT-4), which often wraps JSON in
+    explanatory text like 'Here is my action:\n{...}\nThis will...'
+    """
+    import re
     text = text.strip()
+    
+    # Step 1: Strip markdown fences (```json ... ```)
     if text.startswith("```"):
-        # Remove opening fence (```json or ```)
         first_newline = text.find("\n")
         if first_newline != -1:
             text = text[first_newline + 1:]
-        # Remove closing fence
         if text.endswith("```"):
             text = text[:-3].rstrip()
+        # Try parsing the fenced content directly
+        try:
+            json.loads(text.strip())
+            return text.strip()
+        except (json.JSONDecodeError, ValueError):
+            pass
+    
+    # Step 2: Try parsing the whole text as JSON
+    try:
+        json.loads(text)
+        return text
+    except (json.JSONDecodeError, ValueError):
+        pass
+    
+    # Step 3: Extract first JSON object using brace matching
+    start = text.find("{")
+    if start != -1:
+        depth = 0
+        for i in range(start, len(text)):
+            if text[i] == "{":
+                depth += 1
+            elif text[i] == "}":
+                depth -= 1
+                if depth == 0:
+                    candidate = text[start:i + 1]
+                    try:
+                        json.loads(candidate)
+                        return candidate
+                    except (json.JSONDecodeError, ValueError):
+                        break
+    
+    # Step 4: Last resort — return original text (will trigger fallback)
     return text
 
 
@@ -275,7 +312,7 @@ def get_model_action(llm: OpenAI, history: List[Dict], data: Dict, step: int = 1
             temperature=TEMPERATURE, max_tokens=MAX_TOKENS,
         )
         text = response.choices[0].message.content
-        clean_text = strip_json_fences(text)
+        clean_text = extract_json(text)
         action = json.loads(clean_text)
         history.append({"role": "assistant", "content": text})
         return action
