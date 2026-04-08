@@ -256,7 +256,6 @@ def extract_json(text: str) -> str:
     Critical: The validator uses Llama-3.1-8B (not GPT-4), which often wraps JSON in
     explanatory text like 'Here is my action:\n{...}\nThis will...'
     """
-    import re
     text = text.strip()
     
     # Step 1: Strip markdown fences (```json ... ```)
