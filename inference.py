@@ -126,28 +126,34 @@ class EnvClient:
 
 # ── LLM agent ─────────────────────────────────────────────────────────────────
 
-SYSTEM_PROMPT = """You are an expert contract review agent. Your task is to:
+SYSTEM_PROMPT = """You are an expert contract review agent performing strategic legal review.
 
+IMPORTANT: This is a STRATEGIC review — not just risk detection. Some risky clauses have high
+business value. You must balance risk management against deal preservation:
+- Accept safe, high-value clauses quickly
+- Negotiate risky clauses that have high business value (do NOT blindly reject them)
+- Reject only clauses that are both high-risk AND low business value
+- Finalize when you have reviewed all visible clauses
+
+Workflow:
 1. REQUEST_NEXT clauses to explore the contract progressively
-2. FLAG_RISK when you identify risky clauses (unlimited liability, auto-renewal, etc.)
-3. DECIDE on each clause (accept/negotiate/reject) based on risk vs business value
-4. FINALIZE when review is complete
+2. FLAG_RISK when you identify risky clauses
+3. DECIDE on each clause — consider BOTH risk severity AND business value
+4. FINALIZE when review is complete (don't waste steps)
 
 Available risk types:
 - unlimited_liability, auto_renewal, unilateral_termination, ip_transfer, exclusivity
 - penalty_clause, unfavorable_jurisdiction, broad_indemnification
 - overly_broad_confidentiality, restrictive_non_compete
 
-Action format:
+Action format (respond with ONLY raw JSON, no markdown):
 {
   "type": "request_next_clause" | "flag_risk" | "make_decision" | "finalize_review",
   "clause_id": "C1",
   "risk_label": "unlimited_liability",
   "decision": "accept" | "negotiate" | "reject",
-  "justification": "reason for action"
-}
-
-Respond ONLY with valid JSON action."""
+  "justification": "brief reason"
+}"""
 
 
 def build_obs_text(data: Dict) -> str:
@@ -170,31 +176,40 @@ def build_obs_text(data: Dict) -> str:
     return "\n".join(lines)
 
 
-def fallback_action(data: Dict, step: int) -> Dict:
-    """Rule-based fallback agent — ensures valid logs even if LLM is unavailable."""
+def fallback_action(data: Dict, step: int, decided_ids: set) -> Dict:
+    """Rule-based fallback agent — ensures valid logs even if LLM is unavailable.
+    
+    Uses persistent decided_ids to track which clauses have already been decided on,
+    preventing infinite loops of re-deciding the same clause.
+    """
     obs = data.get("observation", data)
     clauses_revealed = obs.get("clauses_revealed", 0)
     total_clauses = obs.get("total_clauses", 0)
     visible_clauses = obs.get("visible_clauses", [])
     flagged_risks = obs.get("flagged_risks", [])
     flagged_ids = {f["clause_id"] for f in flagged_risks}
+    max_steps = obs.get("max_steps", MAX_STEPS)
 
-    # Strategy: explore first, then flag risky-looking clauses, then finalize
+    # Force finalize if running low on steps
+    if step >= max_steps - 1:
+        return {"type": "finalize_review", "justification": "Finalizing before step limit"}
+
+    # Strategy: explore first, then flag risky-looking clauses, then decide, then finalize
     if clauses_revealed < total_clauses and step <= total_clauses + 1:
         return {"type": "request_next_clause"}
 
     # Flag unflagged clauses that contain risk keywords
     risk_keywords = {
-        "unlimited_liability": ["unlimited", "without limitation", "any and all damages"],
-        "auto_renewal": ["automatically renew", "successive terms", "auto-renew"],
+        "unlimited_liability": ["unlimited", "without limitation", "any and all damages", "any and all losses"],
+        "auto_renewal": ["automatically renew", "successive terms", "auto-renew", "automatic renewal"],
         "unilateral_termination": ["terminate immediately", "sole discretion", "for convenience"],
-        "ip_transfer": ["intellectual property", "work made for hire", "assigns all right"],
+        "ip_transfer": ["intellectual property", "work made for hire", "assigns all right", "irrevocably assigns"],
         "broad_indemnification": ["indemnify", "hold harmless", "defend and indemnify"],
         "penalty_clause": ["liquidated damages", "penalty", "withhold payment"],
-        "exclusivity": ["exclusive", "shall not provide similar"],
-        "restrictive_non_compete": ["non-compete", "shall not compete", "not engage"],
-        "unfavorable_jurisdiction": ["cayman", "singapore", "offshore"],
-        "overly_broad_confidentiality": ["any information", "whatsoever", "any purpose"],
+        "exclusivity": ["exclusive", "shall not provide similar", "preferred-vendor"],
+        "restrictive_non_compete": ["non-compete", "shall not compete", "not engage", "not directly compete"],
+        "unfavorable_jurisdiction": ["cayman", "singapore", "offshore", "grand cayman"],
+        "overly_broad_confidentiality": ["any information", "whatsoever", "any purpose", "defined broadly"],
     }
     for clause in visible_clauses:
         cid = clause.get("id", "")
@@ -204,24 +219,55 @@ def fallback_action(data: Dict, step: int) -> Dict:
         for risk_label, keywords in risk_keywords.items():
             if any(kw in text_lower for kw in keywords):
                 return {"type": "flag_risk", "clause_id": cid, "risk_label": risk_label,
-                        "justification": f"Keyword match for {risk_label}"}
+                        "justification": f"Identified {risk_label} risk pattern"}
 
-    # Make decisions on visible clauses
-    decided_ids = set()
+    # Make decisions on visible clauses — use negotiate for high-value risky clauses
     for clause in visible_clauses:
         cid = clause.get("id", "")
-        if cid not in decided_ids:
-            if cid in flagged_ids:
-                return {"type": "make_decision", "clause_id": cid, "decision": "reject",
-                        "justification": "Rejecting flagged risky clause"}
-            else:
-                return {"type": "make_decision", "clause_id": cid, "decision": "accept",
-                        "justification": "Accepting clause with no identified risks"}
+        if cid in decided_ids:
+            continue
+        decided_ids.add(cid)
+        text_lower = clause.get("text", "").lower()
+        is_flagged = cid in flagged_ids
+        # Detect high-value signals in clause text
+        high_value_signals = ["revenue", "$", "million", "exclusive", "partnership",
+                              "preferred-vendor", "guaranteed", "commitment", "pipeline"]
+        has_high_value = any(sig in text_lower for sig in high_value_signals)
+        
+        if is_flagged and has_high_value:
+            # Risky BUT high value — negotiate, don't reject
+            return {"type": "make_decision", "clause_id": cid, "decision": "negotiate",
+                    "justification": "Risky clause with high business value — negotiating terms"}
+        elif is_flagged:
+            # Risky and low value — reject
+            return {"type": "make_decision", "clause_id": cid, "decision": "reject",
+                    "justification": "High risk with low business value"}
+        else:
+            # Safe clause — accept
+            return {"type": "make_decision", "clause_id": cid, "decision": "accept",
+                    "justification": "Clause has no identified risks"}
 
-    return {"type": "finalize_review", "justification": "Review complete"}
+    return {"type": "finalize_review", "justification": "All clauses reviewed and decided"}
 
 
-def get_model_action(llm: OpenAI, history: List[Dict], data: Dict, step: int = 1) -> Dict:
+def strip_json_fences(text: str) -> str:
+    """Strip markdown ```json ... ``` fences that many LLMs wrap around JSON."""
+    text = text.strip()
+    if text.startswith("```"):
+        # Remove opening fence (```json or ```)
+        first_newline = text.find("\n")
+        if first_newline != -1:
+            text = text[first_newline + 1:]
+        # Remove closing fence
+        if text.endswith("```"):
+            text = text[:-3].rstrip()
+    return text
+
+
+def get_model_action(llm: OpenAI, history: List[Dict], data: Dict, step: int = 1,
+                     decided_ids: set = None) -> Dict:
+    if decided_ids is None:
+        decided_ids = set()
     history.append({"role": "user", "content": build_obs_text(data)})
     try:
         response = llm.chat.completions.create(
@@ -229,15 +275,16 @@ def get_model_action(llm: OpenAI, history: List[Dict], data: Dict, step: int = 1
             temperature=TEMPERATURE, max_tokens=MAX_TOKENS,
         )
         text = response.choices[0].message.content
-        action = json.loads(text)
+        clean_text = strip_json_fences(text)
+        action = json.loads(clean_text)
         history.append({"role": "assistant", "content": text})
         return action
     except json.JSONDecodeError as e:
         debug(f"JSON parse error: {e} — using fallback agent")
-        return fallback_action(data, step)
+        return fallback_action(data, step, decided_ids)
     except Exception as e:
         debug(f"LLM call failed: {e} — using fallback agent")
-        return fallback_action(data, step)
+        return fallback_action(data, step, decided_ids)
 
 
 # ── Per-task episode ───────────────────────────────────────────────────────────
@@ -248,6 +295,7 @@ async def run_task(env: EnvClient, llm: OpenAI, task_id: str) -> Dict:
     steps_taken = 0
     score = 0.0
     success = False
+    decided_ids: set = set()  # Persistent across all steps — prevents re-deciding
 
     log_start(task=task_id, env="contract_review_v2", model=MODEL_NAME)
 
@@ -259,7 +307,11 @@ async def run_task(env: EnvClient, llm: OpenAI, task_id: str) -> Dict:
             if done:
                 break
 
-            action = get_model_action(llm, history, data, step)
+            # Force finalize if we're about to hit step limit
+            if step >= MAX_STEPS - 1:
+                action = {"type": "finalize_review", "justification": "Finalizing before step limit"}
+            else:
+                action = get_model_action(llm, history, data, step, decided_ids)
             error = None
 
             try:

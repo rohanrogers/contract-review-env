@@ -186,36 +186,36 @@ HARD_CONTRACTS = [
                 id="H1_C1",
                 text="Payment terms shall be net-90 from invoice date, subject to Client's standard procurement review cycle and approval process, which may extend the payment period; provided that Client reserves the right to offset any amounts owed against any claims or disputed charges.",
                 risks=[],
-                severity=0.3,
-                business_value=0.6
+                severity=0.1,
+                business_value=0.9
             ),
             ContractClause(
                 id="H1_C2",
-                text="The initial term shall be three years, automatically extending for additional one-year periods unless written notice of non-renewal is provided; such notice shall be effective only if delivered by certified mail to the registered office address, and shall require approval by Client's board of directors if initiated by Contractor but may be effectuated by Client's procurement manager.",
-                risks=[RiskType.AUTO_RENEWAL, RiskType.UNILATERAL_TERMINATION],
-                severity=0.9,
-                business_value=0.3
+                text="The initial term shall be three years with automatic renewal for successive one-year periods unless either party provides 90 days written notice. This contract governs the exclusive $2.4M annual enterprise platform license, and all revenue commitments, SLA guarantees, and dedicated support tiers are contingent upon this renewal structure remaining intact.",
+                risks=[RiskType.AUTO_RENEWAL],
+                severity=0.5,
+                business_value=0.85
             ),
             ContractClause(
                 id="H1_C3",
-                text="Contractor shall defend, indemnify, and hold harmless Client Parties (defined to include Client, its parent, subsidiaries, affiliates, and their respective officers, directors, employees, agents, successors, and assigns) from any and all Losses (defined to include claims, demands, actions, damages, liabilities, costs, and expenses including attorneys' fees and expert witness fees) arising from, relating to, or in connection with: (a) services performed or not performed hereunder; (b) any actual or alleged infringement of third-party intellectual property rights; (c) any breach or alleged breach of representations, warranties, or covenants; or (d) any negligent or willful acts or omissions of Contractor or its personnel, regardless of whether such Losses arise in contract, tort, strict liability, or any other theory of liability.",
+                text="Contractor shall defend, indemnify, and hold harmless Client and its affiliates from any and all losses, claims, damages, liabilities, costs and expenses (including attorneys' fees) arising from or relating to: (a) services performed hereunder; (b) infringement of third-party IP rights; or (c) breach of any representation or warranty. This indemnification is a core condition of the strategic partnership and underpins Client's commitment to co-develop and co-market joint solutions worth an estimated $8M in pipeline revenue.",
                 risks=[RiskType.INDEMNIFICATION, RiskType.UNLIMITED_LIABILITY],
-                severity=1.0,
-                business_value=0.2
+                severity=0.9,
+                business_value=0.8
             ),
             ContractClause(
                 id="H1_C4",
-                text="Contractor acknowledges that during the course of engagement, it may have access to or become aware of Confidential Information, which shall include not only information marked as confidential but also any business, technical, financial, customer, supplier, pricing, strategic, or other information that reasonably should be understood as confidential given the nature of the information and circumstances of disclosure; Contractor agrees to protect such information using the same degree of care used to protect its own confidential information of like kind, but in no event less than reasonable care, and shall not disclose such information to any third party or use it for any purpose whatsoever except as strictly necessary for performance hereunder.",
+                text="Contractor acknowledges that during the engagement it may access Confidential Information, defined broadly to include any business, technical, financial, or strategic information. Contractor agrees to protect such information using reasonable care and shall not disclose it to third parties or use it for any purpose except as strictly necessary for performance hereunder.",
                 risks=[RiskType.CONFIDENTIALITY],
-                severity=0.7,
+                severity=0.6,
                 business_value=0.5
             ),
             ContractClause(
                 id="H1_C5",
-                text="Contractor agrees that all Deliverables shall constitute works made for hire under applicable copyright law; to the extent any Deliverable does not qualify as a work made for hire, Contractor hereby irrevocably assigns, transfers, and conveys to Client all right, title, and interest in and to such Deliverable, including all intellectual property rights therein, whether now known or hereafter devised; Contractor further agrees to execute any documents reasonably requested by Client to perfect such assignment and waives any moral rights or similar rights it may have in the Deliverables.",
+                text="Contractor agrees that all Deliverables shall constitute works made for hire; to the extent any Deliverable does not so qualify, Contractor irrevocably assigns to Client all right, title, and interest. In exchange, Client grants Contractor a perpetual, royalty-free license to use derivative methodologies developed during the engagement for future client work, and Contractor retains all rights to its pre-existing IP and tools.",
                 risks=[RiskType.IP_TRANSFER],
                 severity=0.8,
-                business_value=0.4
+                business_value=0.7
             ),
             ContractClause(
                 id="H1_C6",
@@ -226,16 +226,16 @@ HARD_CONTRACTS = [
             ),
             ContractClause(
                 id="H1_C7",
-                text="Contractor covenants that, during the term and for forty-eight (48) months following termination for any reason, it shall not, whether directly or indirectly, as principal, agent, employee, consultant, or in any other capacity: (a) engage in any business that competes with any line of business conducted by Client or its affiliates; (b) solicit or service any customer or prospective customer of Client with whom Contractor had contact or about whom Contractor obtained information during the engagement; or (c) hire, solicit, or encourage any employee or contractor of Client to terminate their relationship with Client; Contractor acknowledges that the scope and duration of these restrictions are reasonable given the nature of Client's business and Contractor's role.",
+                text="During the term and for twenty-four (24) months following termination, Contractor shall not directly compete with Client's core platform business in the enterprise SaaS market. In consideration, Client grants Contractor exclusive preferred-vendor status for all professional services engagements across Client's portfolio companies, representing approximately $1.5M in guaranteed annual revenue.",
                 risks=[RiskType.EXCLUSIVITY, RiskType.NON_COMPETE],
-                severity=0.95,
-                business_value=0.1
+                severity=0.85,
+                business_value=0.65
             ),
             ContractClause(
                 id="H1_C8",
-                text="This Agreement shall be governed by and construed in accordance with the laws of the Cayman Islands, without regard to conflicts of law principles; any legal action or proceeding arising hereunder shall be brought exclusively in the courts of George Town, Grand Cayman, and each party irrevocably submits to the jurisdiction of such courts and waives any objection to venue or claim of inconvenient forum.",
+                text="This Agreement shall be governed by and construed in accordance with the laws of the Cayman Islands, without regard to conflicts of law principles; any legal action or proceeding arising hereunder shall be brought exclusively in the courts of George Town, Grand Cayman, and each party irrevocably submits to the jurisdiction of such courts.",
                 risks=[RiskType.JURISDICTION],
-                severity=0.8,
+                severity=0.75,
                 business_value=0.3
             ),
         ]

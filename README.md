@@ -31,7 +31,7 @@ Real-world contract review is a **strategic, multi-step reasoning task** — not
 3. **Make strategic decisions** — balance risk vs. business value (accept / negotiate / reject)
 4. **Work under constraints** — time, budget, and cognitive load limitations
 
-This environment transforms contract review from a static classification wrapper into an **interactive decision-making system** that challenges AI agents to reason strategically across multiple steps.
+This environment transforms contract review from a static classification wrapper into an **interactive decision-making system** that challenges AI agents to reason strategically across multiple steps. Critically, the hard task forces genuine trade-offs — some risky clauses have high business value, so blindly rejecting all risks produces a poor score.
 
 ---
 
@@ -158,7 +158,7 @@ Agents must balance risk severity vs. business value, precision vs. recall, and 
 export API_BASE_URL="https://api.openai.com/v1"   # LLM API endpoint
 export MODEL_NAME="gpt-4o-mini"                    # Model identifier
 export HF_TOKEN="your-huggingface-token"           # HF / API key
-export ENV_URL="http://localhost:7860"             # Environment URL
+export ENV_URL="https://rohanrogers-contract-review-env.hf.space"   # Environment URL
 ```
 
 ### Local Development
@@ -208,7 +208,7 @@ python inference.py
 [STEP] step=2 action={"type": "flag_risk", "clause_id": "C2", "risk_label": "unlimited_liability"} reward=0.35 done=false error=null
 [STEP] step=3 action={"type": "make_decision", "clause_id": "C2", "decision": "reject"} reward=0.30 done=false error=null
 [STEP] step=4 action={"type": "finalize_review"} reward=0.00 done=true error=null
-[END] success=true steps=4 rewards=0.05,0.35,0.30,0.00
+[END] task=easy_detection score=0.75 steps=4
 ```
 
 ### Baseline Results

@@ -142,23 +142,91 @@ class EfficiencyGrader(TaskGrader):
         return max(0.01, min(0.99, efficiency_score))
 
 
+class BusinessAwarenessGrader(TaskGrader):
+    """Grade based on preserving high-value clauses while managing risk."""
+    
+    def grade(self, env: ContractReviewEnvironment) -> float:
+        if not env.visible_clause_ids:
+            return 0.01
+        
+        total_value_score = 0.0
+        num_evaluated = 0
+        
+        for clause in env.all_clauses:
+            if clause.id not in env.visible_clause_ids:
+                continue
+            
+            decision = env.decisions_made.get(clause.id)
+            has_risks = len(clause.risks) > 0
+            bv = clause.business_value
+            severity = clause.severity
+            
+            if decision is None:
+                # No decision made on this clause — minor penalty for high-value clauses
+                if bv > 0.6:
+                    total_value_score += 0.3
+                else:
+                    total_value_score += 0.5
+            elif decision.value == "reject":
+                if bv > 0.6 and has_risks:
+                    # Rejected high-value risky clause — should have negotiated
+                    total_value_score += 0.2
+                elif bv > 0.6 and not has_risks:
+                    # Rejected high-value safe clause — very bad
+                    total_value_score += 0.0
+                else:
+                    # Rejected low-value clause — fine
+                    total_value_score += 0.7
+            elif decision.value == "negotiate":
+                if has_risks and bv > 0.5:
+                    # Negotiated risky high-value clause — optimal
+                    total_value_score += 1.0
+                elif has_risks:
+                    # Negotiated risky low-value clause — acceptable
+                    total_value_score += 0.6
+                else:
+                    # Negotiated safe clause — unnecessary
+                    total_value_score += 0.5
+            elif decision.value == "accept":
+                if not has_risks and bv > 0.5:
+                    # Accepted safe high-value clause — optimal
+                    total_value_score += 1.0
+                elif not has_risks:
+                    # Accepted safe low-value clause — fine
+                    total_value_score += 0.8
+                elif severity < 0.5:
+                    # Accepted low-risk clause — acceptable
+                    total_value_score += 0.6
+                else:
+                    # Accepted high-risk clause — bad
+                    total_value_score += max(0.0, 1.0 - severity)
+            
+            num_evaluated += 1
+        
+        avg_score = total_value_score / num_evaluated if num_evaluated > 0 else 0.0
+        return max(0.01, min(0.99, avg_score))
+
+
 class ComprehensiveGrader(TaskGrader):
-    """Comprehensive grading combining all aspects"""
+    """Comprehensive grading combining all aspects — emphasizes strategic trade-offs."""
     
     def grade(self, env: ContractReviewEnvironment) -> float:
         risk_grader = RiskDetectionGrader(self.task_id, self.difficulty)
         decision_grader = DecisionQualityGrader(self.task_id, self.difficulty)
+        business_grader = BusinessAwarenessGrader(self.task_id, self.difficulty)
         efficiency_grader = EfficiencyGrader(self.task_id, self.difficulty)
         
         risk_score = risk_grader.grade(env)
         decision_score = decision_grader.grade(env)
+        business_score = business_grader.grade(env)
         efficiency_score = efficiency_grader.grade(env)
         
-        # Weighted combination
+        # Weighted combination — decision quality and business awareness are key
         final_score = (
-            risk_score * 0.4 +
-            decision_score * 0.4 +
-            efficiency_score * 0.2
+            risk_score * 0.25 +
+            decision_score * 0.35 +
+            business_score * 0.25 +
+            efficiency_score * 0.15
         )
         
         return max(0.01, min(0.99, final_score))
@@ -186,9 +254,9 @@ TASKS = {
         "task_id": "hard_comprehensive",
         "difficulty": "hard",
         "contract_id": "HARD_001",
-        "description": "Conduct comprehensive review of a complex partnership agreement with conflicting clauses, ambiguous language, and multiple compounded risks. Balance efficiency, accuracy, and strategic decision-making.",
+        "description": "Conduct strategic review of a complex partnership agreement where some risky clauses have high business value. Agent must balance risk management against deal preservation — blindly rejecting all risks will kill the deal.",
         "grader": ComprehensiveGrader("hard_comprehensive", "hard"),
-        "target_score": 0.6
+        "target_score": 0.55
     }
 }
 
