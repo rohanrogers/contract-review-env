@@ -22,7 +22,7 @@ if HF_TOKEN is None:
     raise ValueError("HF_TOKEN environment variable is required")
 
 # ── Runtime configuration ─────────────────────────────────────────────────────
-ENV_URL                 = os.getenv("ENV_URL", "http://localhost:7860")
+ENV_URL                 = os.getenv("ENV_URL", "https://rohanrogers-contract-review-env.hf.space")
 TEMPERATURE             = 0.7
 MAX_TOKENS              = 2000
 MAX_STEPS               = 20
@@ -66,12 +66,11 @@ def log_step(*, step: int, action, reward: float, done: bool, error=None) -> Non
     )
 
 
-def log_end(*, success: bool, steps: int, rewards: list) -> None:
-    success_str = "true" if success else "false"
-    rewards_str = ",".join(fmt_reward(r) for r in rewards)
+def log_end(*, task: str, score: float, steps: int) -> None:
+    """Emit [END] with task= and score= fields — validator parses score= specifically."""
     print(
-        f"[END] success={success_str} steps={steps} rewards={rewards_str}",
-        flush=True
+        f"[END] task={task} score={fmt_reward(score)} steps={steps}",
+        flush=True,
     )
 
 
@@ -291,7 +290,7 @@ async def run_task(env: EnvClient, llm: OpenAI, task_id: str) -> Dict:
         success = score >= SUCCESS_SCORE_THRESHOLD
 
     finally:
-        log_end(success=success, steps=steps_taken, rewards=rewards)
+        log_end(task=task_id, score=score, steps=steps_taken)
 
     return {"task_id": task_id, "score": score, "steps": steps_taken}
 
@@ -326,7 +325,7 @@ async def main():
             except asyncio.TimeoutError:
                 debug(f"Task {task_id} timed out after {TASK_TIMEOUT_SECONDS}s")
                 # CRITICAL: Always emit [END] even on timeout
-                log_end(success=False, steps=MAX_STEPS, rewards=[0.01])
+                log_end(task=task_id, score=0.01, steps=MAX_STEPS)
                 results.append({"task_id": task_id, "score": 0.01, "steps": MAX_STEPS})
 
     avg_score = sum(r["score"] for r in results) / len(results) if results else 0.0
