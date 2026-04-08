@@ -221,12 +221,12 @@ class ComprehensiveGrader(TaskGrader):
         business_score = business_grader.grade(env)
         efficiency_score = efficiency_grader.grade(env)
         
-        # Weighted combination — decision quality and business awareness are key
+        # Weighted combination — business awareness is heaviest for hard tasks
         final_score = (
-            risk_score * 0.25 +
-            decision_score * 0.35 +
-            business_score * 0.25 +
-            efficiency_score * 0.15
+            risk_score * 0.20 +
+            decision_score * 0.30 +
+            business_score * 0.30 +
+            efficiency_score * 0.20
         )
         
         return max(0.01, min(0.99, final_score))
