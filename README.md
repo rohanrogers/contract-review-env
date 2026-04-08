@@ -221,6 +221,20 @@ python inference.py
 
 ---
 
+## 💡 Key Finding: Contract Review is a Multi-Objective Problem
+
+The hard task reveals that **risk-averse strategies perform poorly** when risky clauses carry high business value. Naive agents that blindly reject risks destroy deal value:
+
+| Strategy | Hard Task Score | Behavior |
+|---|---|---|
+| Reject all risky clauses | **0.39** | Kills high-value clauses — deal collapses |
+| Accept all clauses | **0.33** | Ignores critical risks — liability exposure |
+| **Strategic trade-offs** | **0.65** | Negotiates high-value risks, rejects low-value ones |
+
+**Insight:** Agents that prioritize risk avoidance alone score ~40% lower than agents that balance risk against business value. This demonstrates that contract review is fundamentally a **trade-off optimization problem**, not a classification task — exactly the kind of strategic reasoning that separates frontier models from simple heuristics.
+
+---
+
 ## 📊 Grading Logic
 
 ### Risk Detection Grader (Easy)
@@ -246,9 +260,10 @@ final = avg_decision_score * 0.7 + decision_coverage * 0.3
 
 ```python
 final_score = (
-    risk_detection_score * 0.4 +
-    decision_quality_score * 0.4 +
-    efficiency_score * 0.2
+    risk_detection_score * 0.20 +
+    decision_quality_score * 0.30 +
+    business_awareness_score * 0.30 +
+    efficiency_score * 0.20
 )
 ```
 
