@@ -67,6 +67,16 @@ Agents must balance risk severity vs. business value, precision vs. recall, and 
 
 ---
 
+## 🆕 Recent Improvements (8 April 2026)
+
+- Redesigned **Hard task** with realistic business trade-offs: 4 high-risk clauses now have high business value, forcing agents to **negotiate** instead of blindly rejecting.
+- Added `BusinessAwarenessGrader` (30% weight) to penalize agents that destroy deal value by over-rejecting valuable clauses.
+- Updated grader weights: **20% risk + 30% decision quality + 30% business awareness + 20% efficiency**.
+- Fixed baseline agent: persistent decision tracking, forced finalize before step limit, robust JSON extraction for smaller open models.
+- Cleaned README for consistency — exact scores, correct weights, concrete failure example.
+
+---
+
 ## 📋 Environment Specification
 
 ### Observation Space
