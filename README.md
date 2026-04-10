@@ -5,7 +5,6 @@ colorFrom: blue
 colorTo: indigo
 sdk: docker
 app_port: 7860
-license: mit
 pinned: false
 tags:
   - openenv
@@ -14,7 +13,7 @@ tags:
   - reinforcement-learning
 ---
 
-An OpenEnv environment for interactive legal contract review that demands **long-horizon strategic reasoning**. Each episode presents a contract with progressively revealed clauses. The agent explores clauses, flags risks, and makes strategic decisions (accept / negotiate / reject) under step and budget constraints. The hard task presents 14 enterprise-grade clauses requiring 22–28 steps for optimal performance — the agent must balance exploration cost against decision quality, and negotiate (not reject) risky clauses that carry high business value.
+An OpenEnv environment for interactive legal contract review. Each episode presents a contract with progressively revealed clauses. The agent explores clauses, flags risks, and makes strategic decisions (accept, negotiate, reject) under step and budget constraints. The hard task presents 14 enterprise-grade clauses requiring 22-28 steps for optimal performance. The agent must balance exploration cost against decision quality, and negotiate risky clauses that carry high business value rather than rejecting them.
 
 ## Quick Start
 
@@ -29,7 +28,7 @@ print(result.observation)  # First clause visible
 
 # Explore
 result = env.step({"type": "request_next_clause"})
-# → Reveals next clause, costs exploration budget
+# Reveals next clause, costs exploration budget
 
 # Flag a risk
 result = env.step({
@@ -54,27 +53,23 @@ env.close()
 
 ## Building and Running Locally
 
-```bash
-# Clone from HF Space
-git clone https://huggingface.co/spaces/rohanrogers/contract-review-env
-cd contract-review-env
-
-# Install dependencies
-pip install -e .
-
-# Start server
-uvicorn server.app:app --host 0.0.0.0 --port 7860 --reload
-
-# Health check
-curl http://localhost:7860/health
-# {"status": "healthy", "environment": "contract_review_v2", "tasks_available": 3}
-```
-
-### Docker
+### Docker (Recommended)
 
 ```bash
 docker build -t contract-review-env .
 docker run -p 7860:7860 contract-review-env
+
+curl http://localhost:7860/health
+# {"status": "healthy", "environment": "contract_review_v2", "tasks_available": 3}
+```
+
+### Without Docker
+
+```bash
+git clone https://huggingface.co/spaces/rohanrogers/contract-review-env
+cd contract-review-env
+pip install -e .
+uvicorn server.app:app --host 0.0.0.0 --port 7860 --reload
 
 curl http://localhost:7860/health
 ```
@@ -92,7 +87,7 @@ Each episode is a multi-step contract review:
 
 ### Action
 
-**ContractAction**: The agent's review action.
+`ContractAction`: The agent's review action.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -103,7 +98,7 @@ Each episode is a multi-step contract review:
 
 ### Observation
 
-**ContractObservation**: The current state of the review.
+`ContractObservation`: The current state of the review.
 
 | Field | Type | Description |
 |-------|------|-------------|
@@ -120,7 +115,7 @@ Each episode is a multi-step contract review:
 
 The environment supports 10 risk types:
 
-`unlimited_liability` · `auto_renewal` · `unilateral_termination` · `ip_transfer` · `exclusivity` · `penalty_clause` · `unfavorable_jurisdiction` · `broad_indemnification` · `overly_broad_confidentiality` · `restrictive_non_compete`
+`unlimited_liability`, `auto_renewal`, `unilateral_termination`, `ip_transfer`, `exclusivity`, `penalty_clause`, `unfavorable_jurisdiction`, `broad_indemnification`, `overly_broad_confidentiality`, `restrictive_non_compete`
 
 ### Reward
 
@@ -137,6 +132,7 @@ All rewards are clamped to the (0.01, 0.99) range before output.
 ## Tasks
 
 ### Task 1: Easy Detection (`easy_detection`)
+
 Simple SaaS agreement with obvious risk keywords (e.g., "unlimited liability"). The grader measures risk detection F1 score.
 
 ```python
@@ -144,6 +140,7 @@ result = env.reset(task_id="easy_detection")
 ```
 
 ### Task 2: Medium Analysis (`medium_analysis`)
+
 Vendor agreement with indirect wording (e.g., "shall continue in successive terms"). The grader evaluates decision quality weighted by risk-value tradeoffs.
 
 ```python
@@ -151,20 +148,21 @@ result = env.reset(task_id="medium_analysis")
 ```
 
 ### Task 3: Hard Comprehensive (`hard_comprehensive`)
-14-clause enterprise partnership agreement where multiple high-risk clauses also carry high business value. The agent cannot fully explore, flag, and decide everything within the budget — it must prioritize. The grader combines four axes:
 
-- Risk detection (20%) — F1 score on flagged risks
-- Decision quality (30%) — appropriateness of accept/negotiate/reject
-- Business awareness (30%) — penalty for destroying high-value clauses
-- Efficiency (20%) — exploration and step budget usage
+14-clause enterprise partnership agreement where multiple high-risk clauses also carry high business value. The agent cannot fully explore, flag, and decide everything within the budget. It must prioritize. The grader combines four axes:
+
+- Risk detection (20%) - F1 score on flagged risks
+- Decision quality (30%) - appropriateness of accept/negotiate/reject
+- Business awareness (30%) - penalty for destroying high-value clauses
+- Efficiency (20%) - exploration and step budget usage
 
 ```python
 result = env.reset(task_id="hard_comprehensive")
-# → 14 clauses, budget allows ~25 steps
-# → Typical optimal trajectory: 22–28 steps
+# 14 clauses, budget allows ~25 steps
+# Typical optimal trajectory: 22-28 steps
 ```
 
-The hard task reveals that naive strategies perform poorly:
+Naive strategies perform poorly:
 
 | Strategy | Score | Why |
 |----------|-------|-----|
@@ -172,18 +170,19 @@ The hard task reveals that naive strategies perform poorly:
 | Accept everything | 0.33 | Ignores critical liability exposure |
 | Strategic trade-offs | 0.72 | Negotiates high-value risks, rejects low-value ones |
 
-**Sample trajectory** (optimal agent on hard task):
+Sample trajectory (optimal agent on hard task):
+
 ```
-Steps 1–13:  Explore all 14 clauses (progressive revelation)
+Steps 1-13:  Explore all 14 clauses (progressive revelation)
 Step  14:    Flag H1_C3 = broad_indemnification (severity 0.9, value 0.8)
 Step  15:    Flag H1_C6 = penalty_clause (severity 0.95, value 0.2)
 Step  16:    Flag H1_C5 = ip_transfer (severity 0.8, value 0.7)
-Step  17:    Make decision: H1_C3 → negotiate (risky BUT high value)
-Step  18:    Make decision: H1_C6 → reject (risky AND low value)
-Step  19:    Make decision: H1_C5 → negotiate (risky BUT high value)
-Step  20:    Make decision: H1_C1 → accept (safe clause)
-Steps 21–22: Decide remaining clauses
-Step  23:    Finalize review → score: 0.72
+Step  17:    Make decision: H1_C3 -> negotiate (risky but high value)
+Step  18:    Make decision: H1_C6 -> reject (risky and low value)
+Step  19:    Make decision: H1_C5 -> negotiate (risky but high value)
+Step  20:    Make decision: H1_C1 -> accept (safe clause)
+Steps 21-22: Decide remaining clauses
+Step  23:    Finalize review -> score: 0.72
 ```
 
 ## Running Inference
@@ -225,13 +224,14 @@ Output follows structured logging format:
 
 ```
 contract-review-env/
+├── .dockerignore         # Docker build exclusions
 ├── __init__.py           # Module exports
 ├── client.py             # ContractReviewEnv client
 ├── models.py             # Action and Observation models
 ├── inference.py          # Baseline LLM agent
 ├── openenv.yaml          # OpenEnv manifest
 ├── pyproject.toml        # Project metadata and dependencies
-├── uv.lock               # Dependency lockfile
+├── requirements.txt      # Server dependencies
 ├── Dockerfile            # Container image definition
 ├── README.md             # This file
 ├── server/
@@ -243,24 +243,24 @@ contract-review-env/
     └── graders.py        # Task definitions and grading logic
 ```
 
-## Use Cases
-
-- **LLM Evaluation**: Benchmark strategic reasoning on high-stakes trade-offs
-- **Agent Training**: Train RL agents with multi-axis reward signals
-- **Legal AI Research**: Test whether models can balance risk vs. business value
-- **Curriculum Learning**: Three difficulty levels for progressive training
-
 ## Design Philosophy
 
-Contract review uniquely suits reinforcement learning because it combines three properties rarely found together:
+Contract review suits reinforcement learning because it combines three properties rarely found together:
 
-1. **Progressive information revelation** — clauses are hidden until explored, so the agent operates under genuine uncertainty. Unlike tasks where the full problem is visible upfront, contract review forces the agent to decide *when to stop exploring* and *when to commit to decisions*.
+1. Progressive information revelation - clauses are hidden until explored, so the agent operates under genuine uncertainty. The agent must decide when to stop exploring and when to commit to decisions.
 
-2. **Irreversible decisions under uncertainty** — once the agent flags a risk or makes a decision on a clause, it cannot undo it. This creates a planning horizon that extends across the entire episode, penalizing greedy strategies.
+2. Irreversible decisions under uncertainty - once the agent flags a risk or makes a decision on a clause, it cannot undo it. This creates a planning horizon that extends across the entire episode, penalizing greedy strategies.
 
-3. **Multi-objective trade-offs** — real contracts contain clauses that are simultaneously risky and valuable. A competent reviewer doesn't reject all risk — they negotiate where the business value justifies it. The 4-axis grading system (risk detection, decision quality, business awareness, efficiency) captures this nuance and ensures no single-axis strategy dominates.
+3. Multi-objective trade-offs - real contracts contain clauses that are simultaneously risky and valuable. A competent reviewer does not reject all risk. They negotiate where the business value justifies it. The 4-axis grading system (risk detection, decision quality, business awareness, efficiency) ensures no single-axis strategy dominates.
 
-The hard task (14 clauses, 25-step budget) is specifically designed so that a random or greedy agent scores ~0.33, a competent but risk-averse agent scores ~0.45, and optimal strategic reasoning yields ~0.72. This score distribution provides a clear gradient signal for RL training.
+The hard task (14 clauses, 25-step budget) is designed so that a random agent scores around 0.33, a risk-averse agent scores around 0.45, and optimal strategic reasoning yields around 0.72. This score distribution provides a clear gradient signal for RL training.
+
+## Use Cases
+
+- LLM Evaluation: Benchmark strategic reasoning on high-stakes trade-offs
+- Agent Training: Train RL agents with multi-axis reward signals
+- Legal AI Research: Test whether models can balance risk vs. business value
+- Curriculum Learning: Three difficulty levels for progressive training
 
 ## Learn More
 
