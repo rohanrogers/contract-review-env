@@ -232,14 +232,18 @@ contract-review-env/
 ├── openenv.yaml          # OpenEnv manifest
 ├── pyproject.toml        # Project metadata and dependencies
 ├── requirements.txt      # Server dependencies
+├── uv.lock               # Dependency lockfile
 ├── Dockerfile            # Container image definition
 ├── README.md             # This file
 ├── server/
+│   ├── __init__.py       # Server module exports
 │   ├── app.py            # FastAPI application
 │   └── environment.py    # Core environment logic
 ├── contracts/
+│   ├── __init__.py       # Contracts module exports
 │   └── datasets.py       # Contract data (easy / medium / hard)
 └── tasks/
+    ├── __init__.py       # Tasks module exports
     └── graders.py        # Task definitions and grading logic
 ```
 
