@@ -175,7 +175,7 @@ The hard task reveals that risk-averse strategies perform poorly when risky clau
 The `inference.py` script runs a baseline LLM agent across all tasks:
 
 ```bash
-export API_BASE_URL="https://api.openai.com/v1"
+export API_BASE_URL="https://router.huggingface.co/v1"
 export MODEL_NAME="meta-llama/Llama-3.1-8B-Instruct"
 export HF_TOKEN="your-token"
 export ENV_URL="https://rohanrogers-contract-review-env.hf.space"
