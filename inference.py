@@ -9,6 +9,7 @@ import asyncio
 import os
 import json
 import sys
+import time
 from typing import Dict, List, Optional
 import httpx
 from openai import OpenAI
@@ -28,6 +29,7 @@ MAX_TOKENS              = 2000
 MAX_STEPS               = 20
 SUCCESS_SCORE_THRESHOLD = 0.5
 TASK_TIMEOUT_SECONDS    = 300   # 5 min per task; 3 tasks = 15 min max (under 20 min limit)
+LLM_MAX_RETRIES         = 3     # Retry LLM calls with backoff (organizer Q17 advice)
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
@@ -126,34 +128,19 @@ class EnvClient:
 
 # ── LLM agent ─────────────────────────────────────────────────────────────────
 
-SYSTEM_PROMPT = """You are an expert contract review agent performing strategic legal review.
+SYSTEM_PROMPT = """You review contracts. Output ONLY a single JSON object. No explanation.
 
-IMPORTANT: This is a STRATEGIC review — not just risk detection. Some risky clauses have high
-business value. You must balance risk management against deal preservation:
-- Accept safe, high-value clauses quickly
-- Negotiate risky clauses that have high business value (do NOT blindly reject them)
-- Reject only clauses that are both high-risk AND low business value
-- Finalize when you have reviewed all visible clauses
+Actions:
+{"type": "request_next_clause"}
+{"type": "flag_risk", "clause_id": "C1", "risk_label": "unlimited_liability"}
+{"type": "make_decision", "clause_id": "C1", "decision": "negotiate", "justification": "high value"}
+{"type": "finalize_review"}
 
-Workflow:
-1. REQUEST_NEXT clauses to explore the contract progressively
-2. FLAG_RISK when you identify risky clauses
-3. DECIDE on each clause — consider BOTH risk severity AND business value
-4. FINALIZE when review is complete (don't waste steps)
+Risk labels: unlimited_liability, auto_renewal, unilateral_termination, ip_transfer, exclusivity, penalty_clause, unfavorable_jurisdiction, broad_indemnification, overly_broad_confidentiality, restrictive_non_compete
 
-Available risk types:
-- unlimited_liability, auto_renewal, unilateral_termination, ip_transfer, exclusivity
-- penalty_clause, unfavorable_jurisdiction, broad_indemnification
-- overly_broad_confidentiality, restrictive_non_compete
+Decisions: accept (safe clauses), negotiate (risky + high business value), reject (risky + low value)
 
-Action format (respond with ONLY raw JSON, no markdown):
-{
-  "type": "request_next_clause" | "flag_risk" | "make_decision" | "finalize_review",
-  "clause_id": "C1",
-  "risk_label": "unlimited_liability",
-  "decision": "accept" | "negotiate" | "reject",
-  "justification": "brief reason"
-}"""
+Strategy: Do NOT reject high-value clauses. Negotiate them instead. Finalize after reviewing all clauses."""
 
 
 def build_obs_text(data: Dict) -> str:
@@ -302,24 +289,43 @@ def extract_json(text: str) -> str:
 
 def get_model_action(llm: OpenAI, history: List[Dict], data: Dict, step: int = 1,
                      decided_ids: set = None) -> Dict:
+    """Get action from LLM with retry. Separates proxy call failures from JSON parse failures.
+    
+    Critical: The validator checks that at least one LLM proxy call was made.
+    A successful call that returns bad JSON STILL counts as a proxy call.
+    Only genuine connection/auth failures should fall through to the fallback.
+    """
     if decided_ids is None:
         decided_ids = set()
     history.append({"role": "user", "content": build_obs_text(data)})
+
+    # ── Step 1: Call LLM with retry ──────────────────────────────────────────
+    text = None
+    for attempt in range(LLM_MAX_RETRIES):
+        try:
+            response = llm.chat.completions.create(
+                model=MODEL_NAME, messages=history,
+                temperature=TEMPERATURE, max_tokens=MAX_TOKENS,
+            )
+            text = response.choices[0].message.content
+            break  # Success — proxy call went through
+        except Exception as e:
+            if attempt < LLM_MAX_RETRIES - 1:
+                wait = 2 ** (attempt + 1)  # 2s, 4s
+                debug(f"LLM retry {attempt+1}/{LLM_MAX_RETRIES} after {wait}s: {e}")
+                time.sleep(wait)
+            else:
+                debug(f"LLM call failed after {LLM_MAX_RETRIES} retries: {e} — using fallback")
+                return fallback_action(data, step, decided_ids)
+
+    # ── Step 2: Parse JSON (proxy call already succeeded at this point) ──────
     try:
-        response = llm.chat.completions.create(
-            model=MODEL_NAME, messages=history,
-            temperature=TEMPERATURE, max_tokens=MAX_TOKENS,
-        )
-        text = response.choices[0].message.content
         clean_text = extract_json(text)
         action = json.loads(clean_text)
         history.append({"role": "assistant", "content": text})
         return action
-    except json.JSONDecodeError as e:
-        debug(f"JSON parse error: {e} — using fallback agent")
-        return fallback_action(data, step, decided_ids)
-    except Exception as e:
-        debug(f"LLM call failed: {e} — using fallback agent")
+    except (json.JSONDecodeError, ValueError, TypeError) as e:
+        debug(f"JSON parse failed (proxy call DID succeed): {e}")
         return fallback_action(data, step, decided_ids)
 
 
