@@ -14,7 +14,7 @@ tags:
   - reinforcement-learning
 ---
 
-An OpenEnv environment for interactive legal contract review. Each episode presents a contract with progressively revealed clauses. The agent explores clauses, flags risks, and makes strategic decisions (accept / negotiate / reject) under step and budget constraints. The hard task forces genuine trade-offs — some risky clauses carry high business value, so blindly rejecting all risks produces a poor score.
+An OpenEnv environment for interactive legal contract review that demands **long-horizon strategic reasoning**. Each episode presents a contract with progressively revealed clauses. The agent explores clauses, flags risks, and makes strategic decisions (accept / negotiate / reject) under step and budget constraints. The hard task presents 14 enterprise-grade clauses requiring 22–28 steps for optimal performance — the agent must balance exploration cost against decision quality, and negotiate (not reject) risky clauses that carry high business value.
 
 ## Quick Start
 
@@ -112,7 +112,7 @@ Each episode is a multi-step contract review:
 | `total_clauses` | `int` | Total clauses in the contract |
 | `clauses_revealed` | `int` | Number revealed so far |
 | `current_step` | `int` | Current step in the episode |
-| `max_steps` | `int` | Step budget (default: 20) |
+| `max_steps` | `int` | Step budget (default: 25) |
 | `exploration_budget` | `float` | Remaining budget, decreases each step |
 | `message` | `str` | Feedback from the last action |
 
@@ -151,7 +151,7 @@ result = env.reset(task_id="medium_analysis")
 ```
 
 ### Task 3: Hard Comprehensive (`hard_comprehensive`)
-Complex partnership agreement where 4 high-risk clauses also carry high business value. The grader combines four axes:
+14-clause enterprise partnership agreement where multiple high-risk clauses also carry high business value. The agent cannot fully explore, flag, and decide everything within the budget — it must prioritize. The grader combines four axes:
 
 - Risk detection (20%) — F1 score on flagged risks
 - Decision quality (30%) — appropriateness of accept/negotiate/reject
@@ -160,15 +160,31 @@ Complex partnership agreement where 4 high-risk clauses also carry high business
 
 ```python
 result = env.reset(task_id="hard_comprehensive")
+# → 14 clauses, budget allows ~25 steps
+# → Typical optimal trajectory: 22–28 steps
 ```
 
-The hard task reveals that risk-averse strategies perform poorly when risky clauses carry high business value:
+The hard task reveals that naive strategies perform poorly:
 
 | Strategy | Score | Why |
 |----------|-------|-----|
 | Reject all risky clauses | 0.39 | Destroys high-value partnerships |
 | Accept everything | 0.33 | Ignores critical liability exposure |
-| Strategic trade-offs | 0.65 | Negotiates high-value risks, rejects low-value ones |
+| Strategic trade-offs | 0.72 | Negotiates high-value risks, rejects low-value ones |
+
+**Sample trajectory** (optimal agent on hard task):
+```
+Steps 1–13:  Explore all 14 clauses (progressive revelation)
+Step  14:    Flag H1_C3 = broad_indemnification (severity 0.9, value 0.8)
+Step  15:    Flag H1_C6 = penalty_clause (severity 0.95, value 0.2)
+Step  16:    Flag H1_C5 = ip_transfer (severity 0.8, value 0.7)
+Step  17:    Make decision: H1_C3 → negotiate (risky BUT high value)
+Step  18:    Make decision: H1_C6 → reject (risky AND low value)
+Step  19:    Make decision: H1_C5 → negotiate (risky BUT high value)
+Step  20:    Make decision: H1_C1 → accept (safe clause)
+Steps 21–22: Decide remaining clauses
+Step  23:    Finalize review → score: 0.72
+```
 
 ## Running Inference
 
@@ -233,6 +249,18 @@ contract-review-env/
 - **Agent Training**: Train RL agents with multi-axis reward signals
 - **Legal AI Research**: Test whether models can balance risk vs. business value
 - **Curriculum Learning**: Three difficulty levels for progressive training
+
+## Design Philosophy
+
+Contract review uniquely suits reinforcement learning because it combines three properties rarely found together:
+
+1. **Progressive information revelation** — clauses are hidden until explored, so the agent operates under genuine uncertainty. Unlike tasks where the full problem is visible upfront, contract review forces the agent to decide *when to stop exploring* and *when to commit to decisions*.
+
+2. **Irreversible decisions under uncertainty** — once the agent flags a risk or makes a decision on a clause, it cannot undo it. This creates a planning horizon that extends across the entire episode, penalizing greedy strategies.
+
+3. **Multi-objective trade-offs** — real contracts contain clauses that are simultaneously risky and valuable. A competent reviewer doesn't reject all risk — they negotiate where the business value justifies it. The 4-axis grading system (risk detection, decision quality, business awareness, efficiency) captures this nuance and ensures no single-axis strategy dominates.
+
+The hard task (14 clauses, 25-step budget) is specifically designed so that a random or greedy agent scores ~0.33, a competent but risk-averse agent scores ~0.45, and optimal strategic reasoning yields ~0.72. This score distribution provides a clear gradient signal for RL training.
 
 ## Learn More
 

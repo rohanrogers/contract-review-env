@@ -238,9 +238,146 @@ HARD_CONTRACTS = [
                 severity=0.75,
                 business_value=0.3
             ),
+            ContractClause(
+                id="H1_C9",
+                text="Contractor shall process all personal data received from Client strictly in accordance with Client's data processing instructions and applicable data protection laws, including but not limited to GDPR, CCPA, and equivalent local regulations. Contractor shall implement appropriate technical and organizational measures to ensure a level of security appropriate to the risk, and shall notify Client of any data breach within 72 hours. This data processing framework is integral to the $3.2M annual analytics platform license and Client's regulatory compliance obligations.",
+                risks=[RiskType.INDEMNIFICATION],
+                severity=0.7,
+                business_value=0.75
+            ),
+            ContractClause(
+                id="H1_C10",
+                text="Neither party shall be liable for any failure or delay in performing its obligations under this Agreement to the extent such failure or delay results from circumstances beyond the reasonable control of the affected party, including but not limited to acts of God, pandemic, epidemic, government actions, war, terrorism, civil disturbance, fire, flood, earthquake, or interruption of essential utilities. The affected party shall provide prompt written notice and use commercially reasonable efforts to mitigate the impact.",
+                risks=[],
+                severity=0.1,
+                business_value=0.6
+            ),
+            ContractClause(
+                id="H1_C11",
+                text="In the event of a Change of Control of either party (defined as the acquisition of 50% or more of the voting securities, or a merger, consolidation, or sale of substantially all assets), the non-affected party may, at its sole discretion, terminate this Agreement upon 30 days written notice without penalty or further obligation, notwithstanding any remaining term or outstanding commitments.",
+                risks=[RiskType.UNILATERAL_TERMINATION],
+                severity=0.65,
+                business_value=0.45
+            ),
+            ContractClause(
+                id="H1_C12",
+                text="Client shall have the right, upon reasonable prior notice and during normal business hours, to audit Contractor's records, systems, and facilities to verify compliance with the terms of this Agreement, including data protection obligations, service level adherence, and financial billing accuracy. Such audits shall occur no more than twice per calendar year and shall be conducted at Client's expense.",
+                risks=[],
+                severity=0.15,
+                business_value=0.55
+            ),
+            ContractClause(
+                id="H1_C13",
+                text="In the event Contractor fails to meet the uptime targets specified in Schedule D (99.95% monthly availability), Client shall be entitled to service level credits calculated as follows: for each 0.1% below the target, a credit of 5% of the monthly service fee shall be applied, up to a maximum of 30% of the monthly fee. Repeated failures (three or more consecutive months below target) shall constitute a material breach entitling Client to terminate with full refund of prepaid fees. These service level commitments underpin a mission-critical $4.1M deployment across Client's global operations.",
+                risks=[RiskType.PENALTY_CLAUSE],
+                severity=0.6,
+                business_value=0.8
+            ),
+            ContractClause(
+                id="H1_C14",
+                text="Contractor shall maintain, at its own expense, comprehensive general liability insurance with coverage of not less than $2,000,000 per occurrence and $5,000,000 in aggregate, professional errors and omissions insurance with coverage of not less than $3,000,000, and cyber liability insurance with coverage of not less than $5,000,000. Certificates of insurance shall be provided upon request.",
+                risks=[],
+                severity=0.05,
+                business_value=0.4
+            ),
         ]
     }
 ]
+
+
+HARD_002_CONTRACT = {
+    "contract_id": "HARD_002",
+    "difficulty": "hard",
+    "clauses": [
+        ContractClause(
+            id="H2_C1",
+            text="Licensor grants to Licensee a non-exclusive, non-transferable, worldwide license to use the Licensed Technology (as defined in Exhibit A) for internal business purposes only, subject to the terms and conditions of this Agreement and the payment of applicable license fees.",
+            risks=[],
+            severity=0.1,
+            business_value=0.9
+        ),
+        ContractClause(
+            id="H2_C2",
+            text="The annual license fee shall be $1,800,000, payable in quarterly installments of $450,000. Licensor reserves the right to increase fees by up to 8% annually upon 60 days written notice. All fees are non-refundable once paid.",
+            risks=[],
+            severity=0.3,
+            business_value=0.85
+        ),
+        ContractClause(
+            id="H2_C3",
+            text="Licensee acknowledges that the Licensed Technology, including all source code, algorithms, architectures, documentation, and derivative works, constitutes the exclusive intellectual property of Licensor. Licensee shall not reverse engineer, decompile, disassemble, or create derivative works based on the Licensed Technology. Any improvements, modifications, or integrations developed by Licensee using the Licensed Technology shall be jointly owned, with Licensor retaining the right to incorporate such improvements into future product releases.",
+            risks=[RiskType.IP_TRANSFER],
+            severity=0.8,
+            business_value=0.7
+        ),
+        ContractClause(
+            id="H2_C4",
+            text="Licensee shall not, directly or indirectly, sublicense, distribute, or make available the Licensed Technology to any third party, including affiliates, subsidiaries, or contractors, without the prior written consent of Licensor.",
+            risks=[RiskType.EXCLUSIVITY],
+            severity=0.5,
+            business_value=0.4
+        ),
+        ContractClause(
+            id="H2_C5",
+            text="Licensee agrees that during the term and for a period of thirty-six (36) months following termination, it shall not develop, market, or distribute any product or service that directly competes with Licensor's core product line as defined in Schedule B. In consideration, Licensor grants Licensee most-favored-customer pricing and priority access to all beta releases and new feature deployments, representing an estimated $600K annual value advantage.",
+            risks=[RiskType.NON_COMPETE],
+            severity=0.85,
+            business_value=0.65
+        ),
+        ContractClause(
+            id="H2_C6",
+            text="Licensor warrants that the Licensed Technology will perform substantially in accordance with the documentation for a period of twelve (12) months from delivery. Licensor's sole obligation and Licensee's exclusive remedy for breach of this warranty shall be correction of material defects or, at Licensor's option, replacement of the defective components.",
+            risks=[],
+            severity=0.2,
+            business_value=0.7
+        ),
+        ContractClause(
+            id="H2_C7",
+            text="Licensee shall indemnify, defend, and hold harmless Licensor from any and all claims, damages, losses, liabilities, costs, and expenses arising from Licensee's use of the Licensed Technology, including but not limited to claims of data breach, regulatory non-compliance, or harm to third parties resulting from Licensee's products or services that incorporate the Licensed Technology.",
+            risks=[RiskType.INDEMNIFICATION],
+            severity=0.75,
+            business_value=0.35
+        ),
+        ContractClause(
+            id="H2_C8",
+            text="All Confidential Information disclosed by either party shall be protected using the same degree of care the receiving party uses to protect its own confidential information, but no less than reasonable care. Confidential Information includes but is not limited to product roadmaps, pricing models, customer data, technical specifications, and any information marked as confidential or that a reasonable person would understand to be confidential.",
+            risks=[RiskType.CONFIDENTIALITY],
+            severity=0.5,
+            business_value=0.5
+        ),
+        ContractClause(
+            id="H2_C9",
+            text="Licensor may terminate this Agreement immediately upon written notice if Licensee breaches any material term, including unauthorized sublicensing, reverse engineering, or failure to pay fees within 30 days of the due date. Upon termination, Licensee must destroy all copies of the Licensed Technology and certify destruction in writing within 10 business days.",
+            risks=[RiskType.UNILATERAL_TERMINATION],
+            severity=0.7,
+            business_value=0.3
+        ),
+        ContractClause(
+            id="H2_C10",
+            text="IN NO EVENT SHALL LICENSOR'S TOTAL LIABILITY UNDER THIS AGREEMENT EXCEED THE FEES PAID BY LICENSEE IN THE TWELVE (12) MONTHS PRECEDING THE CLAIM. THIS LIMITATION APPLIES TO ALL CAUSES OF ACTION IN THE AGGREGATE, INCLUDING WITHOUT LIMITATION BREACH OF CONTRACT, TORT, NEGLIGENCE, STRICT LIABILITY, AND STATUTORY CLAIMS.",
+            risks=[],
+            severity=0.1,
+            business_value=0.8
+        ),
+        ContractClause(
+            id="H2_C11",
+            text="This Agreement shall be governed by and construed in accordance with the laws of the State of Delaware, without regard to its conflict of laws provisions. Any dispute arising under or in connection with this Agreement shall be resolved exclusively through binding arbitration administered by the American Arbitration Association in Wilmington, Delaware.",
+            risks=[],
+            severity=0.2,
+            business_value=0.6
+        ),
+        ContractClause(
+            id="H2_C12",
+            text="Licensor shall provide Licensee with reasonable technical support during normal business hours, including access to a dedicated support portal, email-based issue resolution within two business days, and quarterly product update briefings. Premium support tiers with 24/7 availability and four-hour response SLAs are available for an additional annual fee of $180,000.",
+            risks=[],
+            severity=0.1,
+            business_value=0.75
+        ),
+    ]
+}
+
+# Add HARD_002 to the hard contracts list
+HARD_CONTRACTS.append(HARD_002_CONTRACT)
 
 
 def get_contract_by_id(contract_id: str):

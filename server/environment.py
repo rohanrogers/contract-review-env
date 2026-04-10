@@ -84,8 +84,8 @@ class ContractReviewEnvironment:
     CORRECT_FLAG_REWARD = 0.4
     DECISION_BONUS = 0.3
     
-    MAX_STEPS = 20
-    INITIAL_BUDGET = 1.0
+    MAX_STEPS = 25
+    INITIAL_BUDGET = 1.25
     
     def __init__(self, contract_data: Dict):
         """
