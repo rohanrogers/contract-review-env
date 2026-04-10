@@ -24,7 +24,10 @@ dev = [
 ]
 
 [project.scripts]
-server = "server.app:main"
+# Server entry point - enables running via: uv run --project . server
+server = "contract_review.server.app:main"
 
 [tool.setuptools]
 include-package-data = true
+packages = ["contract_review", "contract_review.server", "contract_review.contracts", "contract_review.tasks"]
+package-dir = { "contract_review" = ".", "contract_review.server" = "server", "contract_review.contracts" = "contracts", "contract_review.tasks" = "tasks" }
