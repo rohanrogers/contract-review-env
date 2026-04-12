@@ -68,10 +68,15 @@ def log_step(*, step: int, action, reward: float, done: bool, error=None) -> Non
     )
 
 
-def log_end(*, task: str, score: float, steps: int) -> None:
-    """Emit [END] with task= and score= fields — validator parses score= specifically."""
+def log_end(*, task: str, score: float, steps: int,
+            success: bool = False, rewards: list = None) -> None:
+    """Emit [END] with all fields from both organizer format and sample script."""
+    success_str = "true" if success else "false"
+    rewards_str = ",".join(fmt_reward(r) for r in (rewards or []))
     print(
-        f"[END] task={task} score={fmt_reward(score)} steps={steps}",
+        f"[END] task={task} success={success_str} "
+        f"steps={steps} score={fmt_reward(score)} "
+        f"rewards={rewards_str}",
         flush=True,
     )
 
@@ -384,7 +389,8 @@ async def run_task(env: EnvClient, llm: OpenAI, task_id: str) -> Dict:
         success = score >= SUCCESS_SCORE_THRESHOLD
 
     finally:
-        log_end(task=task_id, score=score, steps=steps_taken)
+        log_end(task=task_id, score=score, steps=steps_taken,
+                success=success, rewards=rewards)
 
     return {"task_id": task_id, "score": score, "steps": steps_taken}
 
@@ -419,7 +425,8 @@ async def main():
             except asyncio.TimeoutError:
                 debug(f"Task {task_id} timed out after {TASK_TIMEOUT_SECONDS}s")
                 # CRITICAL: Always emit [END] even on timeout
-                log_end(task=task_id, score=0.01, steps=MAX_STEPS)
+                log_end(task=task_id, score=0.01, steps=MAX_STEPS,
+                        success=False, rewards=[])
                 results.append({"task_id": task_id, "score": 0.01, "steps": MAX_STEPS})
 
     avg_score = sum(r["score"] for r in results) / len(results) if results else 0.0
